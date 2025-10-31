@@ -1,9 +1,18 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   IMBRIANI NOLEGGIO - shared-utils.js v1.0
-   Utility Frontend Condivise (scripts.js + admin.js)
+   IMBRIANI NOLEGGIO - shared-utils.js v1.1 - Safe globals
+   Utility Frontend Condivise con guardie anti-conflitto
    ═══════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
+
+// =====================
+// SAFE GLOBAL HELPERS (evita ridichiarazioni)
+// =====================
+window.qsId = window.qsId || function(id) { return document.getElementById(id); };
+window.isValidCF = window.isValidCF || function(cf) {
+  const cfUpper = String(cf || '').toUpperCase().trim();
+  return cfUpper.length === 16 && /^[A-Z0-9]+$/.test(cfUpper);
+};
 
 // =====================
 // FETCH WITH RETRY
@@ -11,10 +20,11 @@
 async function fetchWithRetry(url, options = {}, retries = 3) {
   try {
     const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     return await response.json();
   } catch (error) {
     if (retries > 0) {
+      console.warn(`Retry ${4-retries}/3 for ${url}:`, error.message);
       await new Promise(r => setTimeout(r, 1000));
       return fetchWithRetry(url, options, retries - 1);
     }
@@ -23,38 +33,44 @@ async function fetchWithRetry(url, options = {}, retries = 3) {
 }
 
 // =====================
-// API CALL WRAPPER
+// API CALL WRAPPER (GET-only)
 // =====================
-async function callAPI(action, payload = {}, method = 'GET') {
+async function callAPI(action, payload = {}) {
   try {
     showLoader(true);
     const params = { ...payload, action, token: FRONTEND_CONFIG.TOKEN };
     const url = `${FRONTEND_CONFIG.API_URL}?${new URLSearchParams(params).toString()}`;
-    const options = { method: 'GET' };
-    const result = await fetchWithRetry(url, options);
-    showLoader(false);
+    const result = await fetchWithRetry(url, { method: 'GET' });
     return result;
   } catch (error) {
-    showLoader(false);
-    console.error(`API Error (${action}): ${error.message}`);
+    console.error(`API Error (${action}):`, error.message);
+    showToast(`Errore ${action}: ${error.message}`, 'danger');
     throw error;
+  } finally {
+    showLoader(false);
   }
 }
 
 // =====================
-// TOAST NOTIFICATIONS
+// UI HELPERS
 // =====================
-function showToast(message, type = 'info', duration = 3000) {
-  const container = document.getElementById('toast-container') || createToastContainer();
+window.showLoader = window.showLoader || function(show = true) {
+  const loader = qsId('loading-overlay');
+  if (loader) loader.classList.toggle('hidden', !show);
+};
+
+window.showToast = window.showToast || function(message, type = 'info', duration = 3000) {
+  const container = qsId('toast-container') || createToastContainer();
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `${message}`;
+  toast.innerHTML = `${getToastIcon(type)} ${message}`;
   container.appendChild(toast);
+  
   setTimeout(() => {
     toast.classList.add('fade-out');
     setTimeout(() => toast.remove(), 300);
   }, duration);
-}
+};
 
 function createToastContainer() {
   const container = document.createElement('div');
@@ -64,16 +80,13 @@ function createToastContainer() {
   return container;
 }
 
-// =====================
-// LOADER
-// =====================
-function showLoader(show = true) {
-  const loader = document.getElementById('loading-overlay');
-  if (loader) loader.classList.toggle('hidden', !show);
+function getToastIcon(type) {
+  const icons = { success: '✅', danger: '❌', warning: '⚠️', info: 'ℹ️' };
+  return icons[type] || 'ℹ️';
 }
 
 // =====================
-// DATE + STRING HELPERS (estratto)
+// DATE HELPERS
 // =====================
 function formattaDataIT(dateObj) {
   if (!dateObj) return '';
@@ -83,23 +96,40 @@ function formattaDataIT(dateObj) {
     return dateObj;
   }
   const d = new Date(dateObj);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return d.toLocaleDateString('it-IT');
 }
 
-function formattaOra(oraStr) {
-  const match = String(oraStr || '').match(/(\d{1,2}):(\d{2})/);
-  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : '08:00';
+function getNextValidTime() {
+  const now = new Date();
+  const validTimes = FRONTEND_CONFIG.validation.ORARI_VALIDI;
+  const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  
+  for (const time of validTimes) {
+    if (time > currentTime) return time;
+  }
+  return validTimes[0]; // Domani
 }
 
-function isValidCF(cf) {
-  const cfUpper = String(cf || '').toUpperCase().trim();
-  if (cfUpper.length !== 16) return false;
-  return /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(cfUpper);
+function getTomorrowDate() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
 }
 
-function qsId(id) { return document.getElementById(id); }
+// =====================
+// STORAGE HELPERS
+// =====================
+function saveBookingDraft(data) {
+  localStorage.setItem(FRONTEND_CONFIG.storage.BOOKING_DRAFT, JSON.stringify(data));
+}
 
-console.log('%c📚 shared-utils.js caricato', 'color: #28a745; font-weight: bold;');
+function loadBookingDraft() {
+  const draft = localStorage.getItem(FRONTEND_CONFIG.storage.BOOKING_DRAFT);
+  return draft ? JSON.parse(draft) : null;
+}
+
+function clearBookingDraft() {
+  localStorage.removeItem(FRONTEND_CONFIG.storage.BOOKING_DRAFT);
+}
+
+console.log('%c📚 shared-utils.js v1.1 loaded', 'color: #28a745; font-weight: bold;');
