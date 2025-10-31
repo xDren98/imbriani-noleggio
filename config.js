@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  GAS_URL: '', // es: https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec',
   AUTH_TOKEN: 'imbriani_secret_2025'
 };
 
