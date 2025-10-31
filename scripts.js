@@ -1,7 +1,7 @@
-/* ══════════════════════════════════════════════════════════════════════════════
-   IMBRIANI NOLEGGIO - scripts.js v6.1.0 PATCHED
-   + Fix profilo completo + Date ISO format + Enhanced UX
-   ══════════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════════
+   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.1.0 PATCHED
+   + Fix profilo completo + Date ISO format + Enhanced UX + New branding
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
@@ -13,7 +13,7 @@ let stepAttuale = 1;
 let bookingData = {};
 let draftTimer = null;
 
-console.log(`%c🎉 Imbriani Noleggio v${VERSION}`, 'font-size: 14px; font-weight: bold; color: #007f17;');
+console.log(`%c🎉 Imbriani Stefano Noleggio v${VERSION}`, 'font-size: 14px; font-weight: bold; color: #007f17;');
 
 // =====================
 // DATE UTILITIES (fix warnings yyyy-MM-dd)
@@ -29,7 +29,7 @@ function toISODate(value) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
   // dd/MM/yyyy or dd-MM-yyyy (from spreadsheet)
-  let m = s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+  let m = s.match(/^(\d{2})[/\-](\d{2})[/\-](\d{4})$/);
   if (m) return `${m[3]}-${m[2]}-${m[1]}`;
 
   // yyyy-MM-ddTHH:mm:ss(.sss)Z (from API)
@@ -434,7 +434,7 @@ function validateStep1() {
   for (const fieldId of required) {
     const field = qsId(fieldId);
     if (!field || !field.value.trim()) {
-      missing.push(fieldId.replace(/-/g, ' ').replace(/^\\w/, c => c.toUpperCase()));
+      missing.push(fieldId.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()));
       field?.classList.add('error');
     } else {
       field?.classList.remove('error');
@@ -728,7 +728,7 @@ function renderUserBookings() {
   
   container.innerHTML = prenotazioniUtente.map(booking => {
     const statusEmoji = FRONTEND_CONFIG.statiEmoji[booking.Stato] || '❓';
-    const statusClass = (booking.Stato || '').toLowerCase().replace(/\\s+/g, '-');
+    const statusClass = (booking.Stato || '').toLowerCase().replace(/\s+/g, '-');
     
     return `
       <div class="booking-item">
@@ -843,7 +843,7 @@ function loadUserProfile() {
   let nome = fullName, cognome = '';
   
   if (fullName.includes(' ')) {
-    const nameParts = fullName.split(/\\s+/);
+    const nameParts = fullName.split(/\s+/);
     nome = nameParts[0];
     cognome = nameParts.slice(1).join(' ');
   }
