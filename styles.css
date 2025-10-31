@@ -1,0 +1,7 @@
+/* Basic styles */
+body { background: #f8f9fa; }
+.spinner-overlay { position: fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.2); z-index: 9999; }
+.card h6 { margin-bottom: .5rem; }
+#lista-veicoli .vehicle { border:1px solid #ddd; padding:.75rem; border-radius:.5rem; cursor:pointer; }
+#lista-veicoli .vehicle.active { border-color:#0d6efd; background:#eef5ff; }
+.badge-expired { background:#dc3545; }
