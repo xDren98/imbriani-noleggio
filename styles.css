@@ -1,7 +1,36 @@
-/* Basic styles */
-body { background: #f8f9fa; }
-.spinner-overlay { position: fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.2); z-index: 9999; }
-.card h6 { margin-bottom: .5rem; }
-#lista-veicoli .vehicle { border:1px solid #ddd; padding:.75rem; border-radius:.5rem; cursor:pointer; }
-#lista-veicoli .vehicle.active { border-color:#0d6efd; background:#eef5ff; }
-.badge-expired { background:#dc3545; }
+/* Basic styles (port) */
+:root{--primary:#007f17;--bg:#f8f9fa;--card:#fff;--border:#dee2e6}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;color:#222}
+.container{max-width:1000px;margin:0 auto;padding:16px}
+.header{padding:16px 0}
+.logo{margin:0}
+.section{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.hidden{display:none!important}
+.loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;z-index:9999}
+.spinner{width:32px;height:32px;border:3px solid #ddd;border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:6px;cursor:pointer}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-outline{background:#fff}
+.btn-success{background:#198754;border-color:#198754;color:#fff}
+.btn-sm{padding:6px 10px;font-size:.9rem}
+.tabs-nav{display:flex;gap:8px;margin-top:8px}
+.tab-button{padding:8px 12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer}
+.tab-button.active{background:#eef9f0;border-color:#cfe9d5}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.bookings-list{display:flex;flex-direction:column;gap:8px}
+.booking-item{border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:#fff}
+.vehicles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.vehicle-card{border:1px solid var(--border);border-radius:8px;padding:12px;background:#fff;cursor:pointer}
+.vehicle-card.active{outline:2px solid var(--primary);background:#f0fff2}
+.driver-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px}
+.toast-container{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:10000}
+.toast{padding:10px 12px;border-radius:6px;color:#fff}
+.toast-info{background:#0d6efd}.toast-success{background:#198754}.toast-warning{background:#ffc107;color:#222}.toast-danger{background:#dc3545}
+.fade-out{opacity:0;transition:opacity .3s ease}
+.wizard-step{display:none}
+.wizard-step.active{display:block}
+.wizard-progress{display:flex;gap:8px}
+.progress-step{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
+.progress-step.active{background:#e6f7ea;border-color:#cfe9d5}
