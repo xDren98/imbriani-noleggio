@@ -257,16 +257,16 @@ Sostituisci `YOUR_GAS_URL` con la tua URL `/exec`:
 
 ```
 # Test connessione
-YOUR_GAS_URL?action=options&token=imbriani_secret_2025
+https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=options&token=imbriani_secret_2025
 
 # Test login
-YOUR_GAS_URL?action=login&token=imbriani_secret_2025&cf=RSSMRA90A01H501L
+https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=login&token=imbriani_secret_2025&cf=RSSMRA90A01H501L
 
 # Test disponibilità veicoli
-YOUR_GAS_URL?action=disponibilita&token=imbriani_secret_2025
+https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=disponibilita&token=imbriani_secret_2025
 
 # Test lista prenotazioni admin
-YOUR_GAS_URL?action=recuperaPrenotazioni&token=imbriani_secret_2025&cf=ALL
+https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=recuperaPrenotazioni&token=imbriani_secret_2025&cf=ALL
 ```
 
 **Risposta attesa**: `{"success":true, "message":"...", "data":[...]}`
