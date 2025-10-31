@@ -1,100 +1,289 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Imbriani Noleggio - Prenotazioni</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imbriani Noleggio - Prenota il tuo Pulmino</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="Prenota pulmini a Roma con Imbriani Noleggio. Facile, veloce e sicuro!">
 </head>
 <body>
-  <div id="app" class="container py-3">
-    <h1 class="mb-3">Imbriani Noleggio</h1>
-    <div id="login-section" class="card p-3 mb-3">
-      <h5 class="mb-2">Login</h5>
-      <div class="input-group">
-        <input id="cf-input" class="form-control" placeholder="Codice Fiscale (16 caratteri)" maxlength="16" />
-        <button id="login-btn" class="btn btn-primary">Entra</button>
-      </div>
-      <small class="text-muted mt-2 d-block">Il CF viene salvato sul tuo dispositivo per accessi rapidi.</small>
-    </div>
-
-    <div id="area-personale" class="d-none">
-      <ul class="nav nav-tabs" id="tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-prenotazioni" type="button" role="tab">Prenotazioni</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-anagrafica" type="button" role="tab">Dati anagrafici</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-patente" type="button" role="tab">Patente</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-nuova" type="button" role="tab">Nuova prenotazione</button>
-        </li>
-      </ul>
-      <div class="tab-content p-3 border border-top-0">
-        <div class="tab-pane fade show active" id="tab-prenotazioni" role="tabpanel">
-          <div id="lista-prenotazioni" class="list-group small"></div>
-        </div>
-        <div class="tab-pane fade" id="tab-anagrafica" role="tabpanel">
-          <form id="form-anagrafica" class="row g-2">
-            <div class="col-md-6"><input class="form-control" id="nome" placeholder="Nome" /></div>
-            <div class="col-md-6"><input class="form-control" id="cognome" placeholder="Cognome" /></div>
-            <div class="col-md-6"><input class="form-control" id="email" placeholder="Email" /></div>
-            <div class="col-md-6"><input class="form-control" id="cellulare" placeholder="Cellulare" /></div>
-            <button class="btn btn-sm btn-primary mt-2" type="button" id="salva-anagrafica">Salva</button>
-          </form>
-        </div>
-        <div class="tab-pane fade" id="tab-patente" role="tabpanel">
-          <div class="row g-2">
-            <div class="col-md-6"><input class="form-control" id="numero-patente" placeholder="Numero patente" /></div>
-            <div class="col-md-6"><input type="date" class="form-control" id="scadenza-patente" placeholder="Scadenza" /></div>
-            <div class="col-12"><span id="badge-scadenza" class="badge bg-secondary">Scadenza sconosciuta</span></div>
-            <div class="col-12"><button class="btn btn-sm btn-primary" id="salva-patente">Salva</button></div>
-          </div>
-        </div>
-        <div class="tab-pane fade" id="tab-nuova" role="tabpanel">
-          <div id="wizard">
-            <div id="step-1" class="card p-3 mb-2">
-              <h6>Step 1: Date, Orari, Destinazione</h6>
-              <div class="row g-2">
-                <div class="col-md-3"><input type="date" id="data-ritiro" class="form-control" /></div>
-                <div class="col-md-3"><select id="ora-ritiro" class="form-select">
-                  <option>08:00</option><option>12:00</option><option>16:00</option><option>20:00</option>
-                </select></div>
-                <div class="col-md-3"><input type="date" id="data-consegna" class="form-control" /></div>
-                <div class="col-md-3"><select id="ora-consegna" class="form-select">
-                  <option>08:00</option><option>12:00</option><option>16:00</option><option>20:00</option>
-                </select></div>
-                <div class="col-12"><input id="destinazione" class="form-control" placeholder="Destinazione" /></div>
-              </div>
-            </div>
-            <div id="step-2" class="card p-3 mb-2">
-              <h6>Step 2: Selezione pulmino (9 posti)</h6>
-              <div id="lista-veicoli" class="row g-2"></div>
-            </div>
-            <div id="step-3" class="card p-3 mb-2">
-              <h6>Step 3: Dati autisti</h6>
-              <div id="drivers-container"></div>
-              <button class="btn btn-sm btn-outline-primary mt-2" id="add-driver">+ Aggiungi autista</button>
-            </div>
-            <div id="step-4" class="card p-3">
-              <h6>Step 4: Riepilogo</h6>
-              <div id="riepilogo"></div>
-              <button id="conferma" class="btn btn-success mt-2">Conferma prenotazione</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <p>Caricamento...</p>
   </div>
 
-  <div id="spinner" class="spinner-overlay d-none"><div class="spinner-border"></div></div>
+  <!-- CONTAINER PRINCIPALE -->
+  <div class="container">
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-content">
+        <h1 class="logo">🚐 Imbriani Noleggio</h1>
+        <p class="tagline">Noleggio Pulmini a Roma</p>
+      </div>
+    </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <!-- LOGIN SECTION -->
+      <div id="login-section" class="section">
+        <div class="login-container">
+          <div class="login-card">
+            <h2>Accedi al tuo account</h2>
+            <form id="login-form" class="form">
+              <div class="form-group">
+                <label for="cf-input">🆔 Codice Fiscale:</label>
+                <input 
+                  type="text" 
+                  id="cf-input" 
+                  placeholder="Inserisci il tuo Codice Fiscale"
+                  maxlength="16"
+                  required
+                  autocomplete="off"
+                >
+                <div class="input-hint">Il tuo codice fiscale (16 caratteri)</div>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <span class="btn-text">Accedi</span>
+                <div class="btn-spinner hidden"></div>
+              </button>
+            </form>
+            <p class="login-note">
+              <strong>Nuovo cliente?</strong> Il tuo account verrà creato automaticamente al primo accesso.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- USER DASHBOARD (nascosta inizialmente) -->
+      <div id="user-dashboard" class="section hidden">
+        <!-- User Info -->
+        <div class="user-info">
+          <div class="user-details">
+            <h2>Benvenuto, <span id="user-name">Cliente</span> 👋</h2>
+            <p id="user-subtitle">Gestisci le tue prenotazioni</p>
+          </div>
+          <button id="logout-btn" class="btn btn-outline" title="Disconnetti">
+            🚪 Esci
+          </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+          <button class="tab-button active" data-tab="prenotazioni">Le mie prenotazioni</button>
+          <button class="tab-button" data-tab="nuovo">Nuova prenotazione</button>
+          <button class="tab-button" data-tab="profilo">Il mio profilo</button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-contents">
+          <!-- PRENOTAZIONI TAB -->
+          <div id="prenotazioni-tab" class="tab-content active">
+            <div class="section-header">
+              <h3>📋 Le tue prenotazioni</h3>
+              <button id="refresh-bookings" class="btn btn-sm btn-outline">🔄 Aggiorna</button>
+            </div>
+            
+            <div id="prenotazioni-list" class="bookings-list">
+              <div class="loading-placeholder">
+                <div class="placeholder-spinner"></div>
+                <p>Caricamento prenotazioni...</p>
+              </div>
+            </div>
+
+            <div id="empty-bookings" class="empty-state hidden">
+              <div class="empty-icon">📅</div>
+              <h4>Nessuna prenotazione trovata</h4>
+              <p>Non hai ancora effettuato prenotazioni.</p>
+              <button class="btn btn-primary" data-tab-switch="nuovo">
+                🎆 Prenota ora
+              </button>
+            </div>
+          </div>
+
+          <!-- NUOVO TAB -->
+          <div id="nuovo-tab" class="tab-content">
+            <div class="section-header">
+              <h3>🎆 Nuova Prenotazione</h3>
+              <div class="wizard-progress">
+                <div class="progress-step active" data-step="1">1</div>
+                <div class="progress-step" data-step="2">2</div>
+                <div class="progress-step" data-step="3">3</div>
+                <div class="progress-step" data-step="4">4</div>
+              </div>
+            </div>
+
+            <!-- STEP 1: Date e Orari -->
+            <div id="step-1" class="wizard-step active">
+              <div class="step-header">
+                <h4>Step 1: Seleziona Date e Orario</h4>
+              </div>
+              <form id="step1-form" class="form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="data-ritiro">Data Ritiro:</label>
+                    <input type="date" id="data-ritiro" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="ora-ritiro">Ora Ritiro:</label>
+                    <select id="ora-ritiro" required>
+                      <option value="">Seleziona orario</option>
+                      <option value="08:00">08:00</option>
+                      <option value="12:00">12:00</option>
+                      <option value="16:00">16:00</option>
+                      <option value="20:00">20:00</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="data-consegna">Data Consegna:</label>
+                    <input type="date" id="data-consegna" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="ora-consegna">Ora Consegna:</label>
+                    <select id="ora-consegna" required>
+                      <option value="">Seleziona orario</option>
+                      <option value="08:00">08:00</option>
+                      <option value="12:00">12:00</option>
+                      <option value="16:00">16:00</option>
+                      <option value="20:00">20:00</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="destinazione">Destinazione:</label>
+                  <input type="text" id="destinazione" placeholder="Es: Roma - Fiumicino" required>
+                </div>
+                <div class="step-actions">
+                  <button type="button" id="step1-next" class="btn btn-primary">Avanti ➡</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- STEP 2: Selezione Veicolo -->
+            <div id="step-2" class="wizard-step">
+              <div class="step-header">
+                <h4>Step 2: Scegli il Pulmino</h4>
+              </div>
+              <div id="veicoli-list" class="vehicles-grid">
+                <div class="loading-placeholder">
+                  <div class="placeholder-spinner"></div>
+                  <p>Caricamento veicoli disponibili...</p>
+                </div>
+              </div>
+              <div class="step-actions">
+                <button type="button" id="step2-back" class="btn btn-outline">⬅ Indietro</button>
+                <button type="button" id="step2-next" class="btn btn-primary" disabled>Avanti ➡</button>
+              </div>
+            </div>
+
+            <!-- STEP 3: Autisti -->
+            <div id="step-3" class="wizard-step">
+              <div class="step-header">
+                <h4>Step 3: Dati Autisti</h4>
+                <p class="step-description">Aggiungi almeno un autista (massimo 3)</p>
+              </div>
+              <div id="autisti-container">
+                <!-- Gli autisti vengono aggiunti dinamicamente -->
+              </div>
+              <div class="autisti-actions">
+                <button type="button" id="add-autista" class="btn btn-outline">
+                  ➕ Aggiungi Autista
+                </button>
+              </div>
+              <div class="step-actions">
+                <button type="button" id="step3-back" class="btn btn-outline">⬅ Indietro</button>
+                <button type="button" id="step3-next" class="btn btn-primary" disabled>Avanti ➡</button>
+              </div>
+            </div>
+
+            <!-- STEP 4: Conferma -->
+            <div id="step-4" class="wizard-step">
+              <div class="step-header">
+                <h4>Step 4: Conferma Prenotazione</h4>
+              </div>
+              <div id="booking-summary" class="booking-summary">
+                <!-- Il riepilogo viene generato dinamicamente -->
+              </div>
+              <div class="step-actions">
+                <button type="button" id="step4-back" class="btn btn-outline">⬅ Indietro</button>
+                <button type="button" id="step4-confirm" class="btn btn-success">
+                  ✅ Conferma Prenotazione
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROFILO TAB -->
+          <div id="profilo-tab" class="tab-content">
+            <div class="section-header">
+              <h3>👤 Il tuo Profilo</h3>
+            </div>
+            <form id="profile-form" class="form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-nome">Nome:</label>
+                  <input type="text" id="profile-nome" required>
+                </div>
+                <div class="form-group">
+                  <label for="profile-cognome">Cognome:</label>
+                  <input type="text" id="profile-cognome" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-email">Email:</label>
+                  <input type="email" id="profile-email" required>
+                </div>
+                <div class="form-group">
+                  <label for="profile-telefono">Telefono:</label>
+                  <input type="tel" id="profile-telefono" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-data-nascita">Data di Nascita:</label>
+                  <input type="date" id="profile-data-nascita" required>
+                </div>
+                <div class="form-group">
+                  <label for="profile-luogo-nascita">Luogo di Nascita:</label>
+                  <input type="text" id="profile-luogo-nascita" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="profile-indirizzo">Indirizzo Completo:</label>
+                <input type="text" id="profile-indirizzo" placeholder="Via, Numero, CAP, Città" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-patente">Numero Patente:</label>
+                  <input type="text" id="profile-patente" required>
+                </div>
+                <div class="form-group">
+                  <label for="profile-patente-scadenza">Scadenza Patente:</label>
+                  <input type="date" id="profile-patente-scadenza" required>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  💾 Salva Modifiche
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
   <script src="config.js"></script>
+  <script src="shared-utils.js"></script>
   <script src="scripts.js"></script>
 </body>
 </html>
