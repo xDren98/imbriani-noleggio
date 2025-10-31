@@ -1,11 +1,11 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   IMBRIANI NOLEGGIO - scripts.js v6.0.0 FINAL
-   + Homepage divisa Nuovi/Esistenti + Auto-fill + Date + ID BOOK-YYYY-XXX
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════════
+   IMBRIANI NOLEGGIO - scripts.js v6.1.0 PATCHED
+   + Fix profilo completo + Date ISO format + Enhanced UX
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
-const VERSION = '6.0.0';
+const VERSION = '6.1.0';
 let clienteCorrente = null;
 let prenotazioniUtente = [];
 let availableVehicles = [];
@@ -14,6 +14,41 @@ let bookingData = {};
 let draftTimer = null;
 
 console.log(`%c🎉 Imbriani Noleggio v${VERSION}`, 'font-size: 14px; font-weight: bold; color: #007f17;');
+
+// =====================
+// DATE UTILITIES (fix warnings yyyy-MM-dd)
+// =====================
+function toISODate(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString().slice(0,10);
+
+  const s = String(value).trim();
+  if (!s) return '';
+
+  // Already ISO yyyy-MM-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // dd/MM/yyyy or dd-MM-yyyy (from spreadsheet)
+  let m = s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+
+  // yyyy-MM-ddTHH:mm:ss(.sss)Z (from API)
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+
+  // Try Date parsing as fallback
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  } catch(e) {}
+
+  return '';
+}
+
+function composeAddress(via, civico, comune) {
+  const parts = [via, civico, comune].filter(p => p && String(p).trim());
+  return parts.join(' ');
+}
 
 // =====================
 // INIT & DOM READY
@@ -173,12 +208,12 @@ function showHomepageSection(type) {
   
   if (type === 'new') {
     // 🎆 NUOVO CLIENTE
-    newSection.classList.remove('hidden');
-    existingSection.classList.add('hidden');
+    if (newSection) newSection.classList.remove('hidden');
+    if (existingSection) existingSection.classList.add('hidden');
   } else {
     // 📋 CLIENTE ESISTENTE
-    newSection.classList.add('hidden');
-    existingSection.classList.remove('hidden');
+    if (newSection) newSection.classList.add('hidden');
+    if (existingSection) existingSection.classList.remove('hidden');
   }
 }
 
@@ -326,7 +361,10 @@ function preFillWizardDefaults() {
   
   Object.entries(fields).forEach(([id, value]) => {
     const field = qsId(id);
-    if (field && !field.value) field.value = value;
+    if (field && !field.value) {
+      field.value = value;
+      console.log(`📅 Pre-filled ${id}: ${value}`);
+    }
   });
 }
 
@@ -396,7 +434,7 @@ function validateStep1() {
   for (const fieldId of required) {
     const field = qsId(fieldId);
     if (!field || !field.value.trim()) {
-      missing.push(fieldId.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()));
+      missing.push(fieldId.replace(/-/g, ' ').replace(/^\\w/, c => c.toUpperCase()));
       field?.classList.add('error');
     } else {
       field?.classList.remove('error');
@@ -558,7 +596,7 @@ function createDriverFormHTML(index, isFirst, prefillData) {
         </div>
         <div class="form-group">
           <label>Data di nascita:</label>
-          <input type="date" class="driver-data-nascita" value="${prefillData.DataNascita || ''}" required>
+          <input type="date" class="driver-data-nascita" value="${toISODate(prefillData.DataNascita)}" required>
         </div>
       </div>
       <div class="form-row">
@@ -574,7 +612,7 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       <div class="form-row">
         <div class="form-group">
           <label>Indirizzo completo:</label>
-          <input type="text" class="driver-indirizzo" value="${(prefillData.ViaResidenza || '') + (prefillData.CivicoResidenza ? ' ' + prefillData.CivicoResidenza : '')}">
+          <input type="text" class="driver-indirizzo" value="${composeAddress(prefillData.ViaResidenza, prefillData.CivicoResidenza, '')}">
         </div>
         <div class="form-group">
           <label>Numero patente:</label>
@@ -584,11 +622,11 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       <div class="form-row">
         <div class="form-group">
           <label>Patente dal:</label>
-          <input type="date" class="driver-inizio-patente" value="${prefillData.InizioPatente || ''}">
+          <input type="date" class="driver-inizio-patente" value="${toISODate(prefillData.InizioPatente)}">
         </div>
         <div class="form-group">
           <label>Scadenza patente:</label>
-          <input type="date" class="driver-scadenza" value="${prefillData.ScadenzaPatente || ''}" required>
+          <input type="date" class="driver-scadenza" value="${toISODate(prefillData.ScadenzaPatente)}" required>
         </div>
       </div>
     </div>
@@ -690,7 +728,7 @@ function renderUserBookings() {
   
   container.innerHTML = prenotazioniUtente.map(booking => {
     const statusEmoji = FRONTEND_CONFIG.statiEmoji[booking.Stato] || '❓';
-    const statusClass = (booking.Stato || '').toLowerCase().replace(/\s+/g, '-');
+    const statusClass = (booking.Stato || '').toLowerCase().replace(/\\s+/g, '-');
     
     return `
       <div class="booking-item">
@@ -795,21 +833,59 @@ async function submitBooking() {
 }
 
 // =====================
-// PROFILE MANAGEMENT
+// PROFILE MANAGEMENT (ENHANCED)
 // =====================
 function loadUserProfile() {
   if (!clienteCorrente) return;
+
+  // 🎯 Smart nome/cognome splitting se "Nome" contiene tutto
+  const fullName = (clienteCorrente.Nome || '').trim();
+  let nome = fullName, cognome = '';
   
+  if (fullName.includes(' ')) {
+    const nameParts = fullName.split(/\\s+/);
+    nome = nameParts[0];
+    cognome = nameParts.slice(1).join(' ');
+  }
+
+  // 🎯 Composizione indirizzo completo da ultimoAutista
+  const ultimoAutista = clienteCorrente.ultimoAutista || {};
+  const indirizzoCompleto = composeAddress(
+    ultimoAutista.ViaResidenza,
+    ultimoAutista.CivicoResidenza,
+    ultimoAutista.ComuneResidenza
+  );
+
   const fields = {
-    'profile-nome': clienteCorrente.Nome || '',
+    'profile-nome': nome,
+    'profile-cognome': cognome,
     'profile-email': clienteCorrente.Email || '',
-    'profile-telefono': clienteCorrente.Cellulare || ''
+    'profile-telefono': clienteCorrente.Cellulare || '',
+    'profile-luogo-nascita': ultimoAutista.LuogoNascita || '',
+    'profile-indirizzo': indirizzoCompleto,
+    'profile-patente': ultimoAutista.NumeroPatente || ''
   };
-  
+
   Object.entries(fields).forEach(([id, value]) => {
     const element = qsId(id);
-    if (element) element.value = value;
+    if (element) {
+      element.value = value;
+      console.log(`👤 Profile loaded ${id}: ${value}`);
+    }
   });
+
+  // 📅 Date fields with ISO conversion
+  const dataNascita = qsId('profile-data-nascita');
+  if (dataNascita) {
+    dataNascita.value = toISODate(ultimoAutista.DataNascita);
+    console.log(`📅 Data nascita: ${ultimoAutista.DataNascita} → ${dataNascita.value}`);
+  }
+
+  const scadenzaPatente = qsId('profile-patente-scadenza');
+  if (scadenzaPatente) {
+    scadenzaPatente.value = toISODate(ultimoAutista.ScadenzaPatente);
+    console.log(`📅 Scadenza patente: ${ultimoAutista.ScadenzaPatente} → ${scadenzaPatente.value}`);
+  }
 }
 
 // =====================
@@ -858,4 +934,4 @@ function resetWizard() {
   clearBookingDraft();
 }
 
-console.log('%c🔧 Scripts v6.0.0 FINAL loaded successfully', 'color: #28a745; font-weight: bold;');
+console.log('%c🔧 Scripts v6.1.0 PATCHED loaded successfully', 'color: #28a745; font-weight: bold;');
