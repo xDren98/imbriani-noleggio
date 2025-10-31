@@ -1,38 +1,33 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   IMBRIANI NOLEGGIO - scripts.js v5.5.0
-   + Nuovo cliente CTA "Verifica disponibilità"
-   + Auto-fill Autista 1 da ultima prenotazione
-   + Validazioni robuste + Salvataggio bozza
+   IMBRIANI NOLEGGIO - scripts.js v6.0.0 FINAL
+   + Homepage divisa Nuovi/Esistenti + Auto-fill + Date + ID BOOK-YYYY-XXX
    ═══════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
-const VERSION = '5.5.0';
+const VERSION = '6.0.0';
 let clienteCorrente = null;
 let prenotazioniUtente = [];
 let availableVehicles = [];
 let stepAttuale = 1;
 let bookingData = {};
+let draftTimer = null;
 
 console.log(`%c🎉 Imbriani Noleggio v${VERSION}`, 'font-size: 14px; font-weight: bold; color: #007f17;');
 
 // =====================
-// INIT
+// INIT & DOM READY
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   initializeApp();
   checkExistingSession();
+  setupAutoSaveDraft();
 });
 
 function initializeApp() {
   // Login form
   const loginForm = qsId('login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
-
-  // Tab navigation
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
-  });
 
   // Logout
   const logoutBtn = qsId('logout-btn');
@@ -41,17 +36,20 @@ function initializeApp() {
   // Wizard navigation
   setupWizardNavigation();
 
+  // Tab navigation (existing customers)
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+  });
+
+  // New customer CTA
+  const checkAvailabilityCTA = qsId('check-availability-cta');
+  if (checkAvailabilityCTA) {
+    checkAvailabilityCTA.addEventListener('click', handleNewCustomerCTA);
+  }
+
   // Refresh actions
   const refreshBtn = qsId('refresh-bookings');
   if (refreshBtn) refreshBtn.addEventListener('click', loadUserBookings);
-
-  // Quick tab switches from CTAs
-  document.querySelectorAll('[data-tab-switch]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const tab = e.target.getAttribute('data-tab-switch');
-      if (tab) switchTab(tab);
-    });
-  });
 
   console.log('🔧 App initialized');
 }
@@ -72,16 +70,22 @@ function setupWizardNavigation() {
     const element = qsId(id);
     if (element) element.addEventListener('click', handler);
   });
+}
 
-  // Form change listeners for auto-save draft
+function setupAutoSaveDraft() {
   const formFields = ['data-ritiro', 'ora-ritiro', 'data-consegna', 'ora-consegna', 'destinazione'];
   formFields.forEach(id => {
     const field = qsId(id);
     if (field) {
-      field.addEventListener('change', saveDraftData);
-      field.addEventListener('input', saveDraftData);
+      field.addEventListener('change', startDraftTimer);
+      field.addEventListener('input', startDraftTimer);
     }
   });
+}
+
+function startDraftTimer() {
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraftData, 2000); // Salva dopo 2s di inattività
 }
 
 function checkExistingSession() {
@@ -154,8 +158,41 @@ function handleLogout() {
   qsId('user-dashboard').classList.add('hidden');
   qsId('cf-input').value = '';
   
-  hideNewCustomerCTA();
+  // Reset sections visibility
+  showHomepageSection('login');
+  
   showToast('Disconnesso', 'info');
+}
+
+// =====================
+// HOMEPAGE SECTIONS (NEW/EXISTING)
+// =====================
+function showHomepageSection(type) {
+  const newSection = qsId('new-customer-section');
+  const existingSection = qsId('existing-customer-section');
+  
+  if (type === 'new') {
+    // 🎆 NUOVO CLIENTE
+    newSection.classList.remove('hidden');
+    existingSection.classList.add('hidden');
+  } else {
+    // 📋 CLIENTE ESISTENTE
+    newSection.classList.add('hidden');
+    existingSection.classList.remove('hidden');
+  }
+}
+
+function handleNewCustomerCTA() {
+  // Switch to existing customer section and open wizard
+  showHomepageSection('existing');
+  switchTab('nuovo');
+  
+  // Pre-fill dates and go directly to Step 2 (vehicle selection)
+  preFillWizardDefaults();
+  setTimeout(() => {
+    goToStep(2);
+    showToast('🎆 Ecco i nostri pulmini 9 posti disponibili!', 'info', 4000);
+  }, 500);
 }
 
 // =====================
@@ -167,8 +204,21 @@ async function loadInitialData() {
     loadAvailableVehicles()
   ]);
   
-  // Mostra CTA nuovo cliente se non ha prenotazioni
-  checkAndShowNewCustomerCTA();
+  // Decide homepage layout based on booking history
+  decideDashboardLayout();
+}
+
+function decideDashboardLayout() {
+  const hasBookings = prenotazioniUtente.length > 0;
+  const isNewCustomer = !clienteCorrente?.ultimoAutista;
+  
+  if (hasBookings || !isNewCustomer) {
+    // Cliente esistente con prenotazioni
+    showHomepageSection('existing');
+  } else {
+    // Nuovo cliente - mostra CTA
+    showHomepageSection('new');
+  }
 }
 
 async function loadUserBookings() {
@@ -200,71 +250,7 @@ async function loadAvailableVehicles() {
 }
 
 // =====================
-// NEW CUSTOMER CTA
-// =====================
-function checkAndShowNewCustomerCTA() {
-  if (!prenotazioniUtente.length) {
-    showNewCustomerCTA();
-  } else {
-    hideNewCustomerCTA();
-  }
-}
-
-function showNewCustomerCTA() {
-  let cta = qsId('new-customer-cta');
-  if (!cta) {
-    cta = document.createElement('div');
-    cta.id = 'new-customer-cta';
-    cta.className = 'new-customer-banner';
-    cta.innerHTML = `
-      <div class="banner-content">
-        <div class="banner-icon">🎆</div>
-        <div class="banner-text">
-          <h4>Benvenuto in Imbriani Noleggio!</h4>
-          <p>Sei un nuovo cliente? Scopri subito i nostri pulmini disponibili per le tue date.</p>
-        </div>
-        <button class="btn btn-primary banner-btn" id="cta-check-availability">
-          🔍 Verifica Disponibilità
-        </button>
-      </div>
-    `;
-    
-    // Inserisci prima delle tabs
-    const tabsNav = document.querySelector('.tabs-nav');
-    if (tabsNav) {
-      tabsNav.parentNode.insertBefore(cta, tabsNav);
-    }
-    
-    // Bind click event
-    qsId('cta-check-availability').addEventListener('click', () => {
-      hideNewCustomerCTA();
-      switchTab('nuovo');
-      goToStep(2); // Vai direttamente alla selezione veicoli
-      
-      // Pre-compila date se vuote
-      const dataRitiro = qsId('data-ritiro');
-      const oraRitiro = qsId('ora-ritiro');
-      if (dataRitiro && !dataRitiro.value) {
-        dataRitiro.value = getTomorrowDate();
-      }
-      if (oraRitiro && !oraRitiro.value) {
-        oraRitiro.value = getNextValidTime();
-      }
-      
-      showToast('Ecco i nostri pulmini disponibili!', 'info');
-    });
-  }
-  
-  cta.classList.remove('hidden');
-}
-
-function hideNewCustomerCTA() {
-  const cta = qsId('new-customer-cta');
-  if (cta) cta.classList.add('hidden');
-}
-
-// =====================
-// TAB MANAGEMENT
+// TAB MANAGEMENT (EXISTING CUSTOMERS)
 // =====================
 function switchTab(tabName) {
   // Update tab buttons
@@ -291,45 +277,64 @@ function switchTab(tabName) {
 // WIZARD MANAGEMENT
 // =====================
 function prepareWizard() {
-  // Carica bozza salvata se disponibile
+  // Load saved draft if available
   const draft = loadBookingDraft();
   if (draft) {
     restoreDraftData(draft);
   } else {
-    // Pre-compila con valori sensati
+    // Pre-fill with smart defaults
     preFillWizardDefaults();
   }
   
-  // Assicurati che ci sia almeno un autista
+  // Reset to step 1
+  goToStep(1);
+  
+  // Clear and re-add first driver
   const container = qsId('autisti-container');
-  if (container && !container.children.length) {
-    addDriver(true); // Primo autista con auto-fill
-  }
+  if (container) container.innerHTML = '';
+  
+  setTimeout(() => addDriver(true), 100); // First driver with auto-fill
 }
 
 function preFillWizardDefaults() {
-  const tomorrow = getTomorrowDate();
-  const nextTime = getNextValidTime();
+  // Tomorrow as default pickup date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
   
-  const dataRitiro = qsId('data-ritiro');
-  const oraRitiro = qsId('ora-ritiro');
-  const dataConsegna = qsId('data-consegna');
-  const oraConsegna = qsId('ora-consegna');
+  // Day after tomorrow as default return date
+  const dayAfter = new Date(tomorrow);
+  dayAfter.setDate(dayAfter.getDate() + 1);
+  const dayAfterStr = dayAfter.toISOString().split('T')[0];
   
-  if (dataRitiro && !dataRitiro.value) dataRitiro.value = tomorrow;
-  if (oraRitiro && !oraRitiro.value) oraRitiro.value = nextTime;
-  if (dataConsegna && !dataConsegna.value) {
-    const dayAfter = new Date(tomorrow);
-    dayAfter.setDate(dayAfter.getDate() + 1);
-    dataConsegna.value = dayAfter.toISOString().split('T')[0];
-  }
-  if (oraConsegna && !oraConsegna.value) oraConsegna.value = nextTime;
+  // Smart time selection based on current time
+  const now = new Date();
+  const currentHour = now.getHours();
+  let defaultTime = '08:00';
+  
+  if (currentHour >= 8 && currentHour < 12) defaultTime = '12:00';
+  else if (currentHour >= 12 && currentHour < 16) defaultTime = '16:00';
+  else if (currentHour >= 16) defaultTime = '20:00';
+  
+  // Fill form fields
+  const fields = {
+    'data-ritiro': tomorrowStr,
+    'ora-ritiro': defaultTime,
+    'data-consegna': dayAfterStr,
+    'ora-consegna': defaultTime
+  };
+  
+  Object.entries(fields).forEach(([id, value]) => {
+    const field = qsId(id);
+    if (field && !field.value) field.value = value;
+  });
 }
 
 function goToStep(stepNum) {
   // Update progress indicators
   document.querySelectorAll('.progress-step').forEach((step, idx) => {
     step.classList.toggle('active', idx + 1 <= stepNum);
+    step.classList.toggle('completed', idx + 1 < stepNum);
   });
   
   // Update step content
@@ -342,21 +347,27 @@ function goToStep(stepNum) {
   // Auto-focus primo campo del step
   setTimeout(() => {
     const activeStep = document.querySelector('.wizard-step.active');
-    const firstInput = activeStep?.querySelector('input, select');
-    if (firstInput) firstInput.focus();
+    const firstInput = activeStep?.querySelector('input:not([readonly]), select');
+    if (firstInput && !firstInput.value) firstInput.focus();
   }, 100);
+  
+  // Auto-scroll to step
+  setTimeout(() => {
+    const activeStep = document.querySelector('.wizard-step.active');
+    if (activeStep) activeStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 200);
 }
 
 function validateAndGoToStep(stepNum) {
   if (stepNum === 2) {
     if (!validateStep1()) return;
     collectStep1Data();
-    loadAvailableVehicles(); // Ricarica per eventuali filtri
+    loadAvailableVehicles(); // Refresh vehicles for selected dates
   }
   
   if (stepNum === 3) {
     if (!bookingData.selectedVehicle) {
-      showToast('Seleziona un veicolo per continuare', 'warning');
+      showToast('Seleziona un pulmino per continuare', 'warning');
       return;
     }
   }
@@ -365,6 +376,10 @@ function validateAndGoToStep(stepNum) {
     const drivers = collectDriverData();
     if (!drivers.length) {
       showToast('Aggiungi almeno un autista valido', 'warning');
+      return;
+    }
+    if (drivers.some(d => !isValidCF(d.CF))) {
+      showToast('Controlla i codici fiscali degli autisti', 'warning');
       return;
     }
     bookingData.drivers = drivers;
@@ -381,7 +396,10 @@ function validateStep1() {
   for (const fieldId of required) {
     const field = qsId(fieldId);
     if (!field || !field.value.trim()) {
-      missing.push(fieldId.replace('-', ' '));
+      missing.push(fieldId.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()));
+      field?.classList.add('error');
+    } else {
+      field?.classList.remove('error');
     }
   }
   
@@ -390,7 +408,7 @@ function validateStep1() {
     return false;
   }
   
-  // Validazione logica date
+  // Date logic validation
   const dataRitiro = new Date(qsId('data-ritiro').value);
   const dataConsegna = new Date(qsId('data-consegna').value);
   const oggi = new Date();
@@ -398,11 +416,13 @@ function validateStep1() {
   
   if (dataRitiro < oggi) {
     showToast('La data di ritiro non può essere nel passato', 'warning');
+    qsId('data-ritiro').focus();
     return false;
   }
   
   if (dataConsegna < dataRitiro) {
     showToast('La data di consegna deve essere successiva al ritiro', 'warning');
+    qsId('data-consegna').focus();
     return false;
   }
   
@@ -429,7 +449,7 @@ function renderVehicles(vehicles) {
   if (!container) return;
   
   if (!vehicles.length) {
-    container.innerHTML = '<div class="empty-message">Nessun pulmino disponibile per il periodo selezionato</div>';
+    container.innerHTML = '<div class="empty-message">🚗 Nessun pulmino disponibile per il periodo selezionato</div>';
     return;
   }
   
@@ -466,7 +486,7 @@ function selectVehicle(targa, element) {
   if (nextBtn) nextBtn.disabled = false;
   
   saveBookingDraft(bookingData);
-  showToast(`Selezionato: ${targa}`, 'success');
+  showToast(`✅ Selezionato: ${targa}`, 'success');
 }
 
 // =====================
@@ -482,7 +502,7 @@ function addDriver(isFirst = false) {
     return;
   }
   
-  // Auto-fill data from last booking if first driver
+  // 🎯 Auto-fill data from last booking if first driver
   const prefillData = isFirst && clienteCorrente?.ultimoAutista ? clienteCorrente.ultimoAutista : {};
   
   const driverForm = document.createElement('div');
@@ -499,10 +519,22 @@ function addDriver(isFirst = false) {
     }
   }
   
+  // Bind real-time validation
+  bindDriverValidation(driverForm);
   updateDriverValidation();
 }
 
 function createDriverFormHTML(index, isFirst, prefillData) {
+  // Smart name splitting if available
+  let prefillNome = prefillData.Nome || '';
+  let prefillCognome = '';
+  
+  if (prefillNome && prefillNome.includes(' ')) {
+    const nameParts = prefillNome.split(' ');
+    prefillNome = nameParts[0];
+    prefillCognome = nameParts.slice(1).join(' ');
+  }
+  
   return `
     <div class="driver-header">
       <h5>👤 Autista ${index}${isFirst ? ' (Intestatario)' : ''}</h5>
@@ -512,11 +544,11 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       <div class="form-row">
         <div class="form-group">
           <label>Nome:</label>
-          <input type="text" class="driver-nome" value="${prefillData.Nome || ''}" required>
+          <input type="text" class="driver-nome" value="${prefillNome}" required>
         </div>
         <div class="form-group">
           <label>Cognome:</label>
-          <input type="text" class="driver-cognome" value="" required>
+          <input type="text" class="driver-cognome" value="${prefillCognome}" required>
         </div>
       </div>
       <div class="form-row">
@@ -542,7 +574,7 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       <div class="form-row">
         <div class="form-group">
           <label>Indirizzo completo:</label>
-          <input type="text" class="driver-indirizzo" value="${prefillData.ViaResidenza || ''} ${prefillData.CivicoResidenza || ''}">
+          <input type="text" class="driver-indirizzo" value="${(prefillData.ViaResidenza || '') + (prefillData.CivicoResidenza ? ' ' + prefillData.CivicoResidenza : '')}">
         </div>
         <div class="form-group">
           <label>Numero patente:</label>
@@ -561,6 +593,28 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       </div>
     </div>
   `;
+}
+
+function bindDriverValidation(driverForm) {
+  const cfInput = driverForm.querySelector('.driver-cf');
+  if (cfInput) {
+    cfInput.addEventListener('input', (e) => {
+      const cf = e.target.value.toUpperCase();
+      e.target.value = cf;
+      
+      if (cf.length === 16) {
+        if (isValidCF(cf)) {
+          e.target.classList.remove('error');
+          e.target.classList.add('valid');
+        } else {
+          e.target.classList.add('error');
+          e.target.classList.remove('valid');
+        }
+      } else {
+        e.target.classList.remove('error', 'valid');
+      }
+    });
+  }
 }
 
 function removeDriver(btn) {
@@ -636,19 +690,19 @@ function renderUserBookings() {
   
   container.innerHTML = prenotazioniUtente.map(booking => {
     const statusEmoji = FRONTEND_CONFIG.statiEmoji[booking.Stato] || '❓';
-    const statusClass = booking.Stato.toLowerCase().replace(' ', '-');
+    const statusClass = (booking.Stato || '').toLowerCase().replace(/\s+/g, '-');
     
     return `
       <div class="booking-item">
         <div class="booking-header">
-          <span class="booking-id">#${booking.ID}</span>
-          <span class="booking-status ${statusClass}">${statusEmoji} ${booking.Stato}</span>
+          <span class="booking-id">#${booking.ID || 'N/A'}</span>
+          <span class="booking-status ${statusClass}">${statusEmoji} ${booking.Stato || 'Da Confermare'}</span>
         </div>
         <div class="booking-info">
           <div class="booking-dates">
-            📅 ${formattaDataIT(booking.DataRitiro)} ${booking.OraRitiro} → ${formattaDataIT(booking.DataConsegna)} ${booking.OraConsegna}
+            📅 ${formattaDataIT(booking.DataRitiro)} ${booking.OraRitiro || ''} → ${formattaDataIT(booking.DataConsegna)} ${booking.OraConsegna || ''}
           </div>
-          <div class="booking-destination">🎯 ${booking.Destinazione}</div>
+          <div class="booking-destination">🎯 ${booking.Destinazione || 'Non specificata'}</div>
           <div class="booking-vehicle">🚗 ${booking.Targa || 'Veicolo da assegnare'}</div>
           <div class="booking-created">📅 Creata: ${formattaDataIT(booking.DataCreazione)}</div>
         </div>
@@ -676,8 +730,8 @@ function updateBookingSummary() {
           <span class="summary-value">${destinazione}</span>
         </div>
         <div class="summary-item">
-          <span class="summary-label">Veicolo:</span>
-          <span class="summary-value">${targa}</span>
+          <span class="summary-label">Pulmino:</span>
+          <span class="summary-value">🚗 ${targa}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">Autisti:</span>
@@ -690,8 +744,13 @@ function updateBookingSummary() {
       ${drivers.map((d, i) => `
         <div class="driver-summary">
           <strong>Autista ${i + 1}:</strong> ${d.Nome} ${d.Cognome} (${d.CF})
+          <br><small>📝 Patente: ${d.NumeroPatente} - Scad: ${formattaDataIT(d.ScadenzaPatente)}</small>
         </div>
       `).join('')}
+    </div>
+    <div class="booking-note">
+      <p><strong>🎯 Nota:</strong> Dopo l'invio riceverai un ID prenotazione univoco formato <code>BOOK-2025-XXX</code></p>
+      <p><small>La prenotazione sarà in stato "Da Confermare" fino all'approvazione dell'admin.</small></p>
     </div>
   `;
 }
@@ -715,12 +774,16 @@ async function submitBooking() {
     const response = await callAPI('creaPrenotazione', payload);
     
     if (response.success) {
-      showToast('✅ Prenotazione inviata con successo!', 'success');
+      const bookingID = response.data?.id || 'N/A';
+      showToast(`✅ Prenotazione ${bookingID} inviata con successo!`, 'success', 5000);
       clearBookingDraft();
       resetWizard();
+      
+      // Switch to bookings and refresh
+      showHomepageSection('existing');
       switchTab('prenotazioni');
       await loadUserBookings();
-      hideNewCustomerCTA(); // Ora non è più nuovo cliente
+      
     } else {
       showToast(response.message || 'Errore durante la prenotazione', 'danger');
     }
@@ -761,10 +824,16 @@ function saveDraftData() {
 function restoreDraftData(draft) {
   if (!draft) return;
   
-  const fields = ['data-ritiro', 'ora-ritiro', 'data-consegna', 'ora-consegna', 'destinazione'];
-  fields.forEach(id => {
-    const field = qsId(id);
-    const draftKey = id.replace('-', '_').replace('_', '');
+  const fieldMappings = {
+    'data-ritiro': 'dataRitiro',
+    'ora-ritiro': 'oraRitiro', 
+    'data-consegna': 'dataConsegna',
+    'ora-consegna': 'oraConsegna',
+    'destinazione': 'destinazione'
+  };
+  
+  Object.entries(fieldMappings).forEach(([fieldId, draftKey]) => {
+    const field = qsId(fieldId);
     if (field && draft[draftKey]) {
       field.value = draft[draftKey];
     }
@@ -782,10 +851,11 @@ function resetWizard() {
   const container = qsId('autisti-container');
   if (container) container.innerHTML = '';
   
-  // Add first driver with auto-fill
+  // Pre-fill defaults and add first driver
+  preFillWizardDefaults();
   setTimeout(() => addDriver(true), 100);
   
   clearBookingDraft();
 }
 
-console.log('%c🔧 Scripts v5.5.0 loaded successfully', 'color: #28a745; font-weight: bold;');
+console.log('%c🔧 Scripts v6.0.0 FINAL loaded successfully', 'color: #28a745; font-weight: bold;');
