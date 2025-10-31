@@ -16,7 +16,7 @@ Crea un nuovo progetto su [script.google.com](https://script.google.com) e incol
 
 ```javascript
 // ====== CONFIGURAZIONE ======
-const SHEET_ID = 'INSERISCI_SHEET_ID';            // ← 🔑 incolla il tuo Sheet ID qui
+const SHEET_ID = '1VAUJNVwxX8OLrkQVJP7IEGrqLIrDjJjrhfr7ABVqtns';            // ← 🔑 incolla il tuo Sheet ID qui
 const AUTH_TOKEN = 'imbriani_secret_2025';        // ← deve combaciare col frontend
 const TIMEZONE = 'Europe/Rome';
 
