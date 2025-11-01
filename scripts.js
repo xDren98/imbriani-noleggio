@@ -1,24 +1,33 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.3.0 PREVENTIVO
-   + 5-step wizard + Mandatory quote request + Phone/WhatsApp integration
+   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.4.0 MEGA ENHANCEMENT
+   + 13 UX Features + Voice Input + Accessibility + Enhanced WhatsApp + Date IT
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
-const VERSION = '6.3.0';
+const VERSION = '6.4.0';
 const PHONE_NUMBER = '3286589618';
+const MAX_WHATSAPP_PER_WINDOW = 3;
+const RATE_LIMIT_WINDOW = 10 * 60 * 1000; // 10 minutes
+const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
+const CALLING_HOURS = { start: 8, end: 21 };
+
 let clienteCorrente = null;
 let prenotazioniUtente = [];
 let availableVehicles = [];
 let stepAttuale = 1;
 let bookingData = {};
 let draftTimer = null;
+let autoSaveTimer = null;
 let preventivoRequested = false;
+let whatsappCount = 0;
+let whatsappTimestamps = [];
+let voiceRecognition = null;
 
-console.log(`%c🎉 Imbriani Stefano Noleggio v${VERSION} + PREVENTIVO`, 'font-size: 14px; font-weight: bold; color: #007f17;');
+console.log(`%c🎉 Imbriani Stefano Noleggio v${VERSION} MEGA ENHANCED`, 'font-size: 14px; font-weight: bold; color: #007f17;');
 
 // =====================
-// DATE UTILITIES (fix warnings yyyy-MM-dd)
+// DATE UTILITIES (Enhanced with Italian format)
 // =====================
 function toISODate(value) {
   if (!value) return '';
@@ -47,30 +56,379 @@ function toISODate(value) {
   return '';
 }
 
+// 🇮🇹 Convert ISO date to Italian format for Google Sheets
+function toItalianDate(isoDate) {
+  if (!isoDate) return '';
+  
+  // ISO yyyy-MM-dd -> dd/MM/yyyy
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  
+  return isoDate; // fallback
+}
+
 function composeAddress(via, civico, comune) {
   const parts = [via, civico, comune].filter(p => p && String(p).trim());
   return parts.join(' ');
 }
 
 // =====================
-// PREVENTIVO UTILITIES
+// PREVENTIVO UTILITIES (Enhanced)
 // =====================
 function buildPreventivoMessage() {
-  const { dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione, targa } = bookingData;
+  const { dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione, targa, selectedVehicle } = bookingData;
   
-  return `Ciao! Vorrei un preventivo per il pulmino ${targa} dal ${formattaDataIT(dataRitiro)} ore ${oraRitiro} al ${formattaDataIT(dataConsegna)} ore ${oraConsegna}, destinazione: ${destinazione}. Grazie!`;
+  // Calculate duration
+  const startDate = new Date(`${dataRitiro}T${oraRitiro}:00`);
+  const endDate = new Date(`${dataConsegna}T${oraConsegna}:00`);
+  const diffMs = endDate - startDate;
+  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(diffHours / 24);
+  const hours = diffHours % 24;
+  
+  let durationText = '';
+  if (days > 0 && hours > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}, ${hours} ore`;
+  else if (days > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}`;
+  else durationText = `${hours} ore`;
+  
+  const posti = selectedVehicle?.Posti || '9';
+  
+  return `🚐 PREVENTIVO PULMINO 📋
+━━━━━━━━━━━━━━━━━━━━
+📅 Dal: ${formattaDataIT(dataRitiro)} alle ${oraRitiro}
+📅 Al: ${formattaDataIT(dataConsegna)} alle ${oraConsegna}
+🎯 Destinazione: ${destinazione}
+🚐 Pulmino: ${targa} (${posti} posti)
+⏰ Durata: ${durationText}
+━━━━━━━━━━━━━━━━━━━━
+Grazie! 🙏`;
 }
 
 function updatePreventivoSummary() {
   const container = qsId('preventivo-details');
   if (!container || !bookingData.targa) return;
   
+  // Calculate duration for display
+  const startDate = new Date(`${bookingData.dataRitiro}T${bookingData.oraRitiro}:00`);
+  const endDate = new Date(`${bookingData.dataConsegna}T${bookingData.oraConsegna}:00`);
+  const diffMs = endDate - startDate;
+  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(diffHours / 24);
+  const hours = diffHours % 24;
+  
+  let durationText = '';
+  if (days > 0 && hours > 0) durationText = `${days}g ${hours}h`;
+  else if (days > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}`;
+  else durationText = `${hours} ore`;
+  
+  const posti = bookingData.selectedVehicle?.Posti || '9';
+  
   container.innerHTML = `
-    <div class="summary-row"><span>🚗 Pulmino:</span> <strong>${bookingData.targa}</strong></div>
+    <div class="summary-row"><span>🚐 Pulmino:</span> <strong>${bookingData.targa} (${posti} posti)</strong></div>
     <div class="summary-row"><span>📅 Ritiro:</span> <strong>${formattaDataIT(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</strong></div>
     <div class="summary-row"><span>📅 Consegna:</span> <strong>${formattaDataIT(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</strong></div>
     <div class="summary-row"><span>🎯 Destinazione:</span> <strong>${bookingData.destinazione}</strong></div>
+    <div class="summary-row"><span>⏰ Durata:</span> <strong>${durationText}</strong></div>
   `;
+}
+
+// =====================
+// RATE LIMITING
+// =====================
+function checkRateLimit() {
+  const now = Date.now();
+  
+  // Clean old timestamps
+  whatsappTimestamps = whatsappTimestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
+  
+  return whatsappTimestamps.length < MAX_WHATSAPP_PER_WINDOW;
+}
+
+function getRateLimitTimeRemaining() {
+  if (whatsappTimestamps.length === 0) return 0;
+  
+  const oldestTimestamp = Math.min(...whatsappTimestamps);
+  const timeRemaining = RATE_LIMIT_WINDOW - (Date.now() - oldestTimestamp);
+  
+  return Math.max(0, Math.ceil(timeRemaining / 1000 / 60)); // minutes
+}
+
+function showRateLimitWarning() {
+  const warning = qsId('rate-limit-warning');
+  const timer = qsId('rate-limit-timer');
+  
+  if (warning) {
+    warning.classList.remove('hidden');
+    
+    if (timer) {
+      const minutes = getRateLimitTimeRemaining();
+      timer.textContent = `${minutes} minuto${minutes > 1 ? 'i' : ''}`;
+    }
+  }
+}
+
+// =====================
+// CALLING HOURS CHECK
+// =====================
+function isWithinCallingHours() {
+  const now = new Date();
+  const hour = now.getHours();
+  return hour >= CALLING_HOURS.start && hour < CALLING_HOURS.end;
+}
+
+function showCallingHoursWarning() {
+  const warning = qsId('calling-hours-warning');
+  if (warning && !isWithinCallingHours()) {
+    warning.classList.remove('hidden');
+  }
+}
+
+// =====================
+// VOICE INPUT
+// =====================
+function initVoiceInput() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    console.log('🎤 Voice recognition not supported');
+    const voiceBtn = qsId('voice-input-btn');
+    if (voiceBtn) voiceBtn.style.display = 'none';
+    return;
+  }
+  
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  voiceRecognition = new SpeechRecognition();
+  voiceRecognition.lang = 'it-IT';
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = false;
+  
+  voiceRecognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    const destinazioneInput = qsId('destinazione');
+    if (destinazioneInput) {
+      destinazioneInput.value = transcript;
+      destinazioneInput.focus();
+      showToast(`🎤 Registrato: ${transcript}`, 'success');
+    }
+  };
+  
+  voiceRecognition.onerror = (event) => {
+    showToast('🎤 Errore registrazione vocale', 'warning');
+  };
+  
+  const voiceBtn = qsId('voice-input-btn');
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', () => {
+      if (voiceRecognition) {
+        voiceBtn.classList.add('recording');
+        showToast('🎤 Parla ora...', 'info', 3000);
+        voiceRecognition.start();
+        
+        setTimeout(() => {
+          voiceBtn.classList.remove('recording');
+        }, 5000);
+      }
+    });
+  }
+}
+
+// =====================
+// CONTRAST MODE
+// =====================
+function initContrastMode() {
+  const contrastToggle = qsId('contrast-toggle');
+  if (!contrastToggle) return;
+  
+  // Check saved preference
+  const contrastEnabled = localStorage.getItem('contrast-mode') === '1';
+  if (contrastEnabled) {
+    document.body.classList.add('high-contrast');
+    contrastToggle.textContent = '🔅';
+  }
+  
+  contrastToggle.addEventListener('click', () => {
+    const isEnabled = document.body.classList.toggle('high-contrast');
+    localStorage.setItem('contrast-mode', isEnabled ? '1' : '0');
+    contrastToggle.textContent = isEnabled ? '🔅' : '🔆';
+    showToast(isEnabled ? '🔆 Contrasto elevato attivato' : '🔅 Contrasto normale', 'info');
+  });
+}
+
+// =====================
+// KEYBOARD SHORTCUTS
+// =====================
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // ESC = back to previous step
+    if (e.key === 'Escape' && stepAttuale > 1) {
+      e.preventDefault();
+      goToStep(stepAttuale - 1);
+      showToast('⬅ Step precedente', 'info');
+    }
+    
+    // CTRL+ENTER = next step
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      const nextBtn = document.querySelector(`#step${stepAttuale}-next, #step${stepAttuale}-confirm`);
+      if (nextBtn && !nextBtn.disabled) {
+        nextBtn.click();
+      }
+    }
+    
+    // F1 = help
+    if (e.key === 'F1') {
+      e.preventDefault();
+      showToast('🎯 Scorciatoie: ESC=Indietro | Ctrl+Enter=Avanti | Tab=Naviga', 'info', 5000);
+    }
+  });
+}
+
+// =====================
+// SWIPE NAVIGATION (Mobile)
+// =====================
+function initSwipeNavigation() {
+  let startX = null;
+  let startY = null;
+  
+  const handleTouchStart = (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  };
+  
+  const handleTouchEnd = (e) => {
+    if (!startX || !startY) return;
+    
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    
+    // Check if horizontal swipe (not vertical scroll)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0 && stepAttuale > 1) {
+        // Swipe right = previous step
+        goToStep(stepAttuale - 1);
+        showToast('👈 Step precedente', 'info');
+      } else if (deltaX < 0 && stepAttuale < 5) {
+        // Swipe left = next step (if allowed)
+        const nextBtn = document.querySelector(`#step${stepAttuale}-next`);
+        if (nextBtn && !nextBtn.disabled) {
+          validateAndGoToStep(stepAttuale + 1);
+        }
+      }
+    }
+    
+    startX = startY = null;
+  };
+  
+  document.addEventListener('touchstart', handleTouchStart, { passive: true });
+  document.addEventListener('touchend', handleTouchEnd, { passive: true });
+}
+
+// =====================
+// CF DUPLICATE CHECK
+// =====================
+function checkCFDuplicates() {
+  const cfInputs = document.querySelectorAll('.driver-cf');
+  const cfValues = Array.from(cfInputs).map(input => input.value.toUpperCase().trim()).filter(cf => cf.length === 16);
+  
+  // Find duplicates
+  const duplicates = cfValues.filter((cf, index) => cfValues.indexOf(cf) !== index);
+  
+  const warning = qsId('cf-duplicate-warning');
+  if (warning) {
+    if (duplicates.length > 0) {
+      warning.classList.remove('hidden');
+      // Highlight duplicate fields
+      cfInputs.forEach(input => {
+        const value = input.value.toUpperCase().trim();
+        if (duplicates.includes(value)) {
+          input.classList.add('error');
+        }
+      });
+      return false;
+    } else {
+      warning.classList.add('hidden');
+      // Remove error highlights
+      cfInputs.forEach(input => input.classList.remove('error'));
+      return true;
+    }
+  }
+  
+  return duplicates.length === 0;
+}
+
+// =====================
+// AUTO-SAVE SYSTEM
+// =====================
+function initAutoSave() {
+  autoSaveTimer = setInterval(() => {
+    if (stepAttuale >= 1 && stepAttuale <= 4) {
+      saveDraftData();
+      showAutoSaveIndicator();
+    }
+  }, AUTO_SAVE_INTERVAL);
+}
+
+function showAutoSaveIndicator() {
+  const indicator = qsId('autosave-indicator');
+  if (indicator) {
+    indicator.classList.remove('hidden');
+    setTimeout(() => {
+      indicator.classList.add('hidden');
+    }, 2000);
+  }
+}
+
+// =====================
+// BREADCRUMB NAVIGATION
+// =====================
+function initBreadcrumbs() {
+  document.querySelectorAll('.breadcrumb-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const targetStep = parseInt(item.getAttribute('data-step'));
+      if (targetStep <= stepAttuale || canAccessStep(targetStep)) {
+        goToStep(targetStep);
+      }
+    });
+  });
+}
+
+function updateBreadcrumbs() {
+  document.querySelectorAll('.breadcrumb-item').forEach((item, index) => {
+    const stepNum = index + 1;
+    item.classList.toggle('active', stepNum === stepAttuale);
+    item.classList.toggle('completed', stepNum < stepAttuale);
+    item.classList.toggle('accessible', stepNum <= stepAttuale || canAccessStep(stepNum));
+  });
+}
+
+function canAccessStep(stepNum) {
+  // Step access logic
+  if (stepNum <= 2) return true;
+  if (stepNum === 3) return bookingData.selectedVehicle;
+  if (stepNum === 4) return preventivoRequested;
+  if (stepNum === 5) return bookingData.drivers?.length > 0;
+  return false;
+}
+
+// =====================
+// FULL NAME VALIDATION
+// =====================
+function validateFullName(input) {
+  const name = input.value.trim();
+  const words = name.split(/\s+/).filter(w => w.length > 0);
+  
+  if (words.length >= 2) {
+    input.classList.remove('error');
+    input.classList.add('valid');
+    return true;
+  } else {
+    input.classList.remove('valid');
+    input.classList.add('error');
+    return false;
+  }
 }
 
 // =====================
@@ -80,6 +438,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeApp();
   checkExistingSession();
   setupAutoSaveDraft();
+  initAutoSave();
+  initVoiceInput();
+  initContrastMode();
+  initKeyboardShortcuts();
+  initSwipeNavigation();
+  initBreadcrumbs();
 });
 
 function initializeApp() {
@@ -116,7 +480,7 @@ function initializeApp() {
   const refreshBtn = qsId('refresh-bookings');
   if (refreshBtn) refreshBtn.addEventListener('click', loadUserBookings);
 
-  console.log('🔧 App initialized with preventivo step');
+  console.log('🔧 App initialized with 13 enhancements');
 }
 
 function setupWizardNavigation() {
@@ -164,18 +528,35 @@ function checkExistingSession() {
 }
 
 // =====================
-// PREVENTIVO HANDLERS
+// PREVENTIVO HANDLERS (Enhanced)
 // =====================
 function handleCallPreventivo() {
+  if (!isWithinCallingHours()) {
+    showCallingHoursWarning();
+    setTimeout(() => {
+      const warning = qsId('calling-hours-warning');
+      if (warning) warning.classList.add('hidden');
+    }, 5000);
+  }
+  
   window.open(`tel:${PHONE_NUMBER}`);
   markPreventivoRequested();
   showToast('📞 Apertura dialer... Dopo la chiamata torna qui!', 'info', 4000);
 }
 
 function handleWhatsAppPreventivo() {
+  if (!checkRateLimit()) {
+    showRateLimitWarning();
+    return;
+  }
+  
   const message = buildPreventivoMessage();
   const encodedMessage = encodeURIComponent(message);
   const whatsappURL = `https://wa.me/39${PHONE_NUMBER}?text=${encodedMessage}`;
+  
+  // Track WhatsApp usage
+  whatsappTimestamps.push(Date.now());
+  whatsappCount++;
   
   window.open(whatsappURL, '_blank');
   markPreventivoRequested();
@@ -190,7 +571,13 @@ function markPreventivoRequested() {
   const statusDiv = qsId('preventivo-completed');
   if (statusDiv) statusDiv.classList.remove('hidden');
   
-  // Enable next button
+  // Hide warnings
+  const rateWarning = qsId('rate-limit-warning');
+  const hourWarning = qsId('calling-hours-warning');
+  if (rateWarning) rateWarning.classList.add('hidden');
+  if (hourWarning) hourWarning.classList.add('hidden');
+  
+  // Enable next button with pulse effect
   const nextBtn = qsId('step3-next');
   if (nextBtn) {
     nextBtn.disabled = false;
@@ -270,7 +657,14 @@ function handleLogout() {
   prenotazioniUtente = [];
   availableVehicles = [];
   preventivoRequested = false;
+  whatsappCount = 0;
+  whatsappTimestamps = [];
   clearBookingDraft();
+  
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+    autoSaveTimer = null;
+  }
   
   Object.values(FRONTEND_CONFIG.storage).forEach(key => {
     localStorage.removeItem(key);
@@ -376,7 +770,7 @@ function switchTab(tabName) {
 }
 
 // =====================
-// WIZARD MANAGEMENT (5 STEPS)
+// WIZARD MANAGEMENT (5 STEPS Enhanced)
 // =====================
 function prepareWizard() {
   // Load saved draft if available
@@ -453,10 +847,14 @@ function goToStep(stepNum) {
   
   stepAttuale = stepNum;
   
+  // Update breadcrumbs
+  updateBreadcrumbs();
+  
   // Step 3 specific: update preventivo summary
   if (stepNum === 3) {
     updatePreventivoSummary();
     checkPreventivoStatus();
+    showCallingHoursWarning();
   }
   
   // Auto-focus primo campo del step
@@ -488,7 +886,7 @@ function validateAndGoToStep(stepNum) {
   }
   
   if (stepNum === 4) {
-    // Check preventivo requirement
+    // Check preventivo requirement (MANDATORY FOR ALL)
     if (!preventivoRequested && localStorage.getItem('PREVENTIVO_REQUESTED') !== '1') {
       showToast('📞 Prima richiedi un preventivo chiamando o scrivendo su WhatsApp', 'warning');
       return;
@@ -503,6 +901,10 @@ function validateAndGoToStep(stepNum) {
     }
     if (drivers.some(d => !isValidCF(d.CF))) {
       showToast('Controlla i codici fiscali degli autisti', 'warning');
+      return;
+    }
+    if (!checkCFDuplicates()) {
+      showToast('Risolvi i codici fiscali duplicati', 'warning');
       return;
     }
     bookingData.drivers = drivers;
@@ -622,7 +1024,7 @@ function selectVehicle(targa, element) {
 }
 
 // =====================
-// DRIVER MANAGEMENT
+// DRIVER MANAGEMENT (Full Name)
 // =====================
 function addDriver(isFirst = false) {
   const container = qsId('autisti-container');
@@ -657,15 +1059,8 @@ function addDriver(isFirst = false) {
 }
 
 function createDriverFormHTML(index, isFirst, prefillData) {
-  // Smart name splitting if available
-  let prefillNome = prefillData.Nome || '';
-  let prefillCognome = '';
-  
-  if (prefillNome && prefillNome.includes(' ')) {
-    const nameParts = prefillNome.split(' ');
-    prefillNome = nameParts[0];
-    prefillCognome = nameParts.slice(1).join(' ');
-  }
+  // Use full name from prefillData.Nome (already contains both name and surname)
+  const fullName = prefillData.Nome || (isFirst && clienteCorrente ? clienteCorrente.Nome || '' : '');
   
   return `
     <div class="driver-header">
@@ -673,15 +1068,10 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       ${!isFirst ? '<button type="button" class="btn btn-sm btn-outline remove-driver">❌ Rimuovi</button>' : ''}
     </div>
     <div class="driver-fields">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Nome:</label>
-          <input type="text" class="driver-nome" value="${prefillNome}" required>
-        </div>
-        <div class="form-group">
-          <label>Cognome:</label>
-          <input type="text" class="driver-cognome" value="${prefillCognome}" required>
-        </div>
+      <div class="form-group">
+        <label>Nome Completo:</label>
+        <input type="text" class="driver-nome-completo" value="${fullName}" placeholder="Es: Mario Rossi" required>
+        <div class="input-hint">Nome e cognome separati da spazio (minimo 2 parole)</div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -729,6 +1119,9 @@ function createDriverFormHTML(index, isFirst, prefillData) {
 
 function bindDriverValidation(driverForm) {
   const cfInput = driverForm.querySelector('.driver-cf');
+  const nameInput = driverForm.querySelector('.driver-nome-completo');
+  
+  // CF validation
   if (cfInput) {
     cfInput.addEventListener('input', (e) => {
       const cf = e.target.value.toUpperCase();
@@ -745,6 +1138,23 @@ function bindDriverValidation(driverForm) {
       } else {
         e.target.classList.remove('error', 'valid');
       }
+      
+      // Check for duplicates after each input
+      setTimeout(checkCFDuplicates, 100);
+    });
+  }
+  
+  // Full name validation
+  if (nameInput) {
+    nameInput.addEventListener('input', (e) => {
+      validateFullName(e.target);
+      updateDriverValidation();
+    });
+    
+    nameInput.addEventListener('blur', (e) => {
+      if (!validateFullName(e.target)) {
+        showToast('Il nome deve contenere almeno nome e cognome', 'warning');
+      }
     });
   }
 }
@@ -755,6 +1165,7 @@ function removeDriver(btn) {
     driverForm.remove();
     updateDriverNumbers();
     updateDriverValidation();
+    checkCFDuplicates();
   }
 }
 
@@ -770,18 +1181,21 @@ function updateDriverNumbers() {
 
 function updateDriverValidation() {
   const driversCount = document.querySelectorAll('.driver-form').length;
+  const validDrivers = collectDriverData();
+  
   const nextBtn = qsId('step4-next');
   if (nextBtn) {
-    nextBtn.disabled = driversCount < FRONTEND_CONFIG.validation.MIN_AUTISTI;
+    nextBtn.disabled = validDrivers.length < FRONTEND_CONFIG.validation.MIN_AUTISTI || !checkCFDuplicates();
   }
 }
 
 function collectDriverData() {
   const drivers = [];
   document.querySelectorAll('.driver-form').forEach(form => {
+    const nomeCompleto = form.querySelector('.driver-nome-completo').value.trim();
+    
     const driver = {
-      Nome: form.querySelector('.driver-nome').value.trim(),
-      Cognome: form.querySelector('.driver-cognome').value.trim(),
+      Nome: nomeCompleto, // Store full name as single field
       CF: form.querySelector('.driver-cf').value.toUpperCase().trim(),
       DataNascita: form.querySelector('.driver-data-nascita').value,
       LuogoNascita: form.querySelector('.driver-luogo-nascita')?.value.trim() || '',
@@ -795,8 +1209,14 @@ function collectDriverData() {
       Email: clienteCorrente?.Email || ''
     };
     
-    // Validate required fields
-    if (driver.Nome && driver.Cognome && isValidCF(driver.CF) && driver.NumeroPatente && driver.ScadenzaPatente) {
+    // Convert dates to Italian format for Google Sheets
+    if (driver.DataNascita) driver.DataNascita = toItalianDate(driver.DataNascita);
+    if (driver.InizioPatente) driver.InizioPatente = toItalianDate(driver.InizioPatente);
+    if (driver.ScadenzaPatente) driver.ScadenzaPatente = toItalianDate(driver.ScadenzaPatente);
+    
+    // Validate required fields + full name
+    const nameWords = nomeCompleto.split(/\s+/).filter(w => w.length > 0);
+    if (nameWords.length >= 2 && isValidCF(driver.CF) && driver.NumeroPatente && driver.ScadenzaPatente) {
       drivers.push(driver);
     }
   });
@@ -875,8 +1295,8 @@ function updateBookingSummary() {
       <h5>👥 Dettagli Autisti:</h5>
       ${drivers.map((d, i) => `
         <div class="driver-summary">
-          <strong>Autista ${i + 1}:</strong> ${d.Nome} ${d.Cognome} (${d.CF})
-          <br><small>📝 Patente: ${d.NumeroPatente} - Scad: ${formattaDataIT(d.ScadenzaPatente)}</small>
+          <strong>Autista ${i + 1}:</strong> ${d.Nome} (${d.CF})
+          <br><small>📝 Patente: ${d.NumeroPatente} - Scad: ${d.ScadenzaPatente}</small>
         </div>
       `).join('')}
     </div>
@@ -899,11 +1319,19 @@ async function submitBooking() {
     return;
   }
   
+  if (!checkCFDuplicates()) {
+    showToast('❌ Risolvi i codici fiscali duplicati', 'danger');
+    return;
+  }
+  
   showLoader(true);
   
   const payload = {
     cf: clienteCorrente?.CF || bookingData.drivers[0]?.CF, // Use first driver CF if no customer logged in
     ...bookingData,
+    // Convert booking dates to Italian format
+    dataRitiro: toItalianDate(bookingData.dataRitiro),
+    dataConsegna: toItalianDate(bookingData.dataConsegna),
     drivers: encodeURIComponent(JSON.stringify(bookingData.drivers)),
     preventivoRichiesto: true // Flag per backend
   };
@@ -945,20 +1373,13 @@ async function submitBooking() {
 }
 
 // =====================
-// PROFILE MANAGEMENT (ENHANCED)
+// PROFILE MANAGEMENT (Full Name)
 // =====================
 function loadUserProfile() {
   if (!clienteCorrente) return;
 
-  // 🎯 Smart nome/cognome splitting se "Nome" contiene tutto
+  // Use full name directly (no splitting needed)
   const fullName = (clienteCorrente.Nome || '').trim();
-  let nome = fullName, cognome = '';
-  
-  if (fullName.includes(' ')) {
-    const nameParts = fullName.split(/\s+/);
-    nome = nameParts[0];
-    cognome = nameParts.slice(1).join(' ');
-  }
 
   // 🎯 Composizione indirizzo completo da ultimoAutista
   const ultimoAutista = clienteCorrente.ultimoAutista || {};
@@ -969,8 +1390,7 @@ function loadUserProfile() {
   );
 
   const fields = {
-    'profile-nome': nome,
-    'profile-cognome': cognome,
+    'profile-nome-completo': fullName,
     'profile-email': clienteCorrente.Email || '',
     'profile-telefono': clienteCorrente.Cellulare || '',
     'profile-luogo-nascita': ultimoAutista.LuogoNascita || '',
@@ -1001,12 +1421,13 @@ function loadUserProfile() {
 }
 
 // =====================
-// DRAFT MANAGEMENT
+// DRAFT MANAGEMENT (Enhanced)
 // =====================
 function saveDraftData() {
   if (stepAttuale === 1) {
     collectStep1Data();
   }
+  console.log('💾 Draft saved automatically');
 }
 
 function restoreDraftData(draft) {
@@ -1048,4 +1469,4 @@ function resetWizard() {
   clearBookingDraft();
 }
 
-console.log('%c🔧 Scripts v6.3.0 PREVENTIVO loaded successfully', 'color: #28a745; font-weight: bold;');
+console.log('%c🔧 Scripts v6.4.0 MEGA ENHANCED loaded successfully - 13 features active!', 'color: #28a745; font-weight: bold;');
