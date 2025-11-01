@@ -1,4 +1,4 @@
-# 🚀 Google Apps Script Backend - Setup Completo
+# 🚀 Google Apps Script Backend - Setup Completo v2.0
 
 ## 📋 Prerequisiti
 
@@ -39,19 +39,27 @@ function doGet(e){
     if (q.token !== AUTH_TOKEN) return err('Unauthorized', 401);
 
     switch(q.action){
+      // USER APIs (existing)
       case 'login':                return handleLogin(q);
       case 'creaPrenotazione':     return handleCreaPrenotazione(q);
       case 'recuperaPrenotazioni': return handleRecuperaPrenotazioni(q);
       case 'disponibilita':        return handleDisponibilita(q);
       case 'modificaStato':        return handleModificaStato(q);
+      
+      // ADMIN APIs (new v2.0)
+      case 'getAllBookings':       return handleGetAllBookings(q);
+      case 'getAllVehicles':       return handleGetAllVehicles(q);
+      case 'updateBookingStatus':  return handleUpdateBookingStatus(q);
+      
       default: return err('Azione non supportata');
     }
   } catch(ex){
-    return err('Errore: ' + ex);
+    Logger.log('doGet error: ' + ex.toString());
+    return err('Errore server: ' + ex.toString());
   }
 }
 
-// ====== ACTIONS ======
+// ====== USER ACTIONS (existing) ======
 function handleLogin(q){
   const cf = (q.cf||'').toUpperCase();
   if (!/^[A-Z0-9]{16}$/.test(cf)) return err('CF non valido');
@@ -223,6 +231,128 @@ function handleModificaStato(q){
   }
   return err('ID non trovato');
 }
+
+// ====== 🆕 ADMIN APIs v2.0 ======
+
+// Get all bookings for admin dashboard
+function handleGetAllBookings(q){
+  try {
+    const sh = sheet(S_PRENOTAZIONI);
+    if (!sh) return err('Foglio prenotazioni mancante');
+    
+    const data = sh.getDataRange().getValues();
+    if (data.length <= 1) return ok([]);
+    
+    const header = data.shift();
+    
+    const bookings = data.map(row => {
+      const booking = {};
+      header.forEach((col, index) => {
+        // Map column names to frontend-expected field names
+        switch(col) {
+          case 'ID prenotazione': booking.ID = row[index] || ''; break;
+          case 'Informazioni cronologiche': booking.DataCreazione = row[index] || ''; break;
+          case 'Nome': booking.NomeCompleto = row[index] || ''; break;
+          case 'Codice fiscale': booking.CF = row[index] || ''; break;
+          case 'Cellulare': booking.Telefono = row[index] || ''; break;
+          case 'Email': booking.Email = row[index] || ''; break;
+          case 'Giorno inizio noleggio': booking.DataRitiro = row[index] || ''; break;
+          case 'Ora inizio noleggio': booking.OraRitiro = row[index] || ''; break;
+          case 'Giorno fine noleggio': booking.DataConsegna = row[index] || ''; break;
+          case 'Ora fine noleggio': booking.OraConsegna = row[index] || ''; break;
+          case 'Destinazione': booking.Destinazione = row[index] || ''; break;
+          case 'Targa': booking.Targa = row[index] || ''; break;
+          case 'Stato prenotazione': booking.Stato = row[index] || 'Da confermare'; break;
+          default: booking[col] = row[index] || ''; break;
+        }
+      });
+      return booking;
+    }).filter(b => b.ID); // Filter out empty rows
+    
+    Logger.log(`📊 Admin: getAllBookings returned ${bookings.length} records`);
+    return ok(bookings);
+    
+  } catch (error) {
+    Logger.log('getAllBookings error: ' + error.toString());
+    return err('Errore caricamento prenotazioni admin');
+  }
+}
+
+// Get all vehicles for admin filters
+function handleGetAllVehicles(q){
+  try {
+    const sh = sheet(S_VEICOLI);
+    if (!sh) return err('Foglio veicoli mancante');
+    
+    const data = sh.getDataRange().getValues();
+    if (data.length <= 1) return ok([]);
+    
+    const header = data.shift();
+    
+    const vehicles = data.map(row => {
+      const vehicle = {};
+      header.forEach((col, index) => {
+        vehicle[col] = row[index] || '';
+      });
+      return vehicle;
+    }).filter(v => v.Targa); // Filter out empty rows
+    
+    Logger.log(`🚐 Admin: getAllVehicles returned ${vehicles.length} vehicles`);
+    return ok(vehicles);
+    
+  } catch (error) {
+    Logger.log('getAllVehicles error: ' + error.toString());
+    return err('Errore caricamento veicoli admin');
+  }
+}
+
+// Update booking status (admin confirm/reject)
+function handleUpdateBookingStatus(q){
+  try {
+    const id = q.id;
+    const status = q.status;
+    
+    if (!id || !status) {
+      return err('Parametri mancanti: id, status');
+    }
+    
+    const sh = sheet(S_PRENOTAZIONI);
+    if (!sh) return err('Foglio prenotazioni mancante');
+    
+    const data = sh.getDataRange().getValues();
+    if (data.length <= 1) return err('Nessuna prenotazione trovata');
+    
+    const header = data[0];
+    const idIndex = header.indexOf('ID prenotazione');
+    const statusIndex = header.indexOf('Stato prenotazione');
+    
+    if (idIndex === -1 || statusIndex === -1) {
+      return err('Colonne ID prenotazione o Stato prenotazione non trovate');
+    }
+    
+    // Find and update the booking
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idIndex]) === String(id)) {
+        sh.getRange(i + 1, statusIndex + 1).setValue(status);
+        
+        // Also update timestamp if "Data aggiornamento" column exists
+        const updateIndex = header.indexOf('Data aggiornamento');
+        if (updateIndex !== -1) {
+          sh.getRange(i + 1, updateIndex + 1).setValue(today('yyyy-MM-dd HH:mm:ss'));
+        }
+        
+        Logger.log(`✅ Updated booking ${id} to status: ${status}`);
+        return ok({ id, status, message: `Prenotazione ${id} aggiornata a: ${status}` });
+      }
+    }
+    
+    return err(`Prenotazione ${id} non trovata`);
+    
+  } catch (error) {
+    Logger.log('updateBookingStatus error: ' + error.toString());
+    return err('Errore aggiornamento stato');
+  }
+}
 ```
 
 ---
@@ -255,43 +385,93 @@ Nella costante `SHEET_ID`, incolla l'ID del tuo Google Sheets:
 
 Sostituisci `YOUR_GAS_URL` con la tua URL `/exec`:
 
+### **🔐 User APIs (existing):**
 ```
 # Test connessione
-https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=options&token=imbriani_secret_2025
+YOUR_GAS_URL?action=options&token=imbriani_secret_2025
 
 # Test login
-https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=login&token=imbriani_secret_2025&cf=RSSMRA90A01H501L
+YOUR_GAS_URL?action=login&token=imbriani_secret_2025&cf=RSSMRA90A01H501L
 
 # Test disponibilità veicoli
-https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=disponibilita&token=imbriani_secret_2025
+YOUR_GAS_URL?action=disponibilita&token=imbriani_secret_2025
 
-# Test lista prenotazioni admin
-https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuvqDIu4R99sUEixlLSW7Y9MyvNWk/exec?action=recuperaPrenotazioni&token=imbriani_secret_2025&cf=ALL
+# Test prenotazioni utente
+YOUR_GAS_URL?action=recuperaPrenotazioni&token=imbriani_secret_2025&cf=RSSMRA90A01H501L
+```
+
+### **🔧 Admin APIs (new v2.0):**
+```
+# Test tutte le prenotazioni (admin)
+YOUR_GAS_URL?action=getAllBookings&token=imbriani_secret_2025
+
+# Test tutti i veicoli (admin)
+YOUR_GAS_URL?action=getAllVehicles&token=imbriani_secret_2025
+
+# Test aggiornamento stato (admin)
+YOUR_GAS_URL?action=updateBookingStatus&token=imbriani_secret_2025&id=1&status=Confermata
 ```
 
 **Risposta attesa**: `{"success":true, "message":"...", "data":[...]}`
 
 ---
 
-## 📊 Mapping campi (per riferimento)
+## 📊 Mapping campi
 
-### Foglio "Risposte del modulo 1":
-| Campo Frontend | Colonna Google Sheets |
-|---|---|
-| CF cliente | Codice fiscale |
-| Date prenotazione | Giorno inizio/fine noleggio |
-| Orari | Ora inizio/fine noleggio |
-| Autista principale | Nome, Data nascita, Numero patente, ecc. |
-| Autista 2 | Nome Autista 2, CF Autista 2, ecc. |
-| Autista 3 | Nome Autista 3, CF Autista 3, ecc. |
-| Gestione | ID prenotazione, Stato prenotazione |
+### **📋 Foglio "Risposte del modulo 1" (Prenotazioni):**
+| Campo Frontend | Colonna Google Sheets | Descrizione |
+|---|---|---|
+| ID | ID prenotazione | Numero univoco auto-incrementale |
+| DataCreazione | Informazioni cronologiche | Timestamp creazione |
+| NomeCompleto | Nome | Nome completo cliente |
+| CF | Codice fiscale | Codice fiscale cliente |
+| Telefono | Cellulare | Numero di telefono |
+| Email | Email | Email cliente |
+| DataRitiro | Giorno inizio noleggio | Data ritiro (YYYY-MM-DD) |
+| OraRitiro | Ora inizio noleggio | Orario ritiro (HH:MM) |
+| DataConsegna | Giorno fine noleggio | Data riconsegna (YYYY-MM-DD) |
+| OraConsegna | Ora fine noleggio | Orario riconsegna (HH:MM) |
+| Destinazione | Destinazione | Luogo di destinazione |
+| Targa | Targa | Targa veicolo assegnato |
+| Stato | Stato prenotazione | Da confermare/Confermata/Annullata |
 
-### Foglio "Gestione Pulmini":
-| Campo Frontend | Colonna Google Sheets |
-|---|---|
-| Disponibilità | Stato = "disponibile" |
-| Filtro posti | Posti = "9" |
-| Info veicolo | Targa, Marca, Modello |
+### **🚐 Foglio "Gestione Pulmini" (Veicoli):**
+| Campo Frontend | Colonna Google Sheets | Descrizione |
+|---|---|---|
+| Targa | Targa | Codice targa veicolo |
+| Marca | Marca | Marca del veicolo |
+| Modello | Modello | Modello del veicolo |
+| Posti | Posti | Numero posti (deve essere "9" per pulmini) |
+| Disponibile | Stato | "disponibile" per veicoli liberi |
+| Note | Note | Note aggiuntive |
+
+---
+
+## 🔥 Admin Dashboard Pro - Nuove Features v2.0
+
+### **📊 Smart Filters**
+- **📅 Date Range**: Filtra per periodo (da/a)
+- **🔍 Stati**: Dropdown con Da confermare/Confermata/Annullata
+- **🚐 Veicoli**: Auto-popolato dalle targhe nel foglio
+- **👤 Cliente**: Live search per nome
+
+### **⚡ Bulk Actions**
+- **☑️ Select all/none**: Checkbox master per selezione multipla
+- **✅ Conferma batch**: Aggiorna multiple prenotazioni a "Confermata"
+- **❌ Rifiuta batch**: Aggiorna multiple prenotazioni a "Annullata"
+- **📊 Counter dinamico**: Mostra quante prenotazioni sono selezionate
+
+### **📈 Export Excel**
+- **📊 Export completo**: Tutte le prenotazioni con 14 colonne
+- **🎯 Export filtrato**: Solo prenotazioni che passano i filtri attuali
+- **📋 Colonne incluse**: ID, Data, Cliente, CF, Telefono, Email, Date ritiro/consegna, Targa, Stato, Note
+- **📅 Filename automatico**: Con timestamp per evitare sovrascritture
+
+### **📊 Analytics & Charts**
+- **📊 Utilizzo Pulmini**: Bar chart con Chart.js
+- **📈 Stati Prenotazioni**: Doughnut chart con colori per stato
+- **📱 Responsive**: Grafici adattivi per mobile
+- **🔄 Auto-refresh**: Si aggiornano automaticamente con i dati
 
 ---
 
@@ -305,24 +485,47 @@ https://script.google.com/macros/s/AKfycbx8vOsfdliS4e5odoRMkvCwaWY7SowSkgtW0zTuv
 **Causa**: Nome scheda errato  
 **Soluzione**: Verifica nomi esatti: `"Risposte del modulo 1"` e `"Gestione Pulmini"`
 
+### "Chart is not defined"
+**Causa**: Chart.js ESM build invece di UMD  
+**Soluzione**: ✅ **Già risolto** - il frontend usa Chart.js UMD build
+
+### "Nessun dato" in Admin Dashboard
+**Causa**: API admin non deployate o SHEET_ID errato  
+**Soluzione**: 
+1. Verifica che il codice completo sia copiato in Apps Script
+2. Fai un nuovo Deploy Web App
+3. Testa le API admin con i link sopra
+
 ### "Disponibilità vuota"
 **Causa**: Nessun veicolo 9 posti disponibile  
 **Soluzione**: Nel foglio "Gestione Pulmini" imposta `Posti=9` e `Stato=disponibile`
-
-### "ID non trovato" (admin)
-**Causa**: Colonna "ID prenotazione" mancante o vuota  
-**Soluzione**: Verifica che la colonna esista e contenga numeri
 
 ---
 
 ## ✅ Sistema operativo quando
 
-- ✅ Apps Script deployato come Web App
+- ✅ Apps Script deployato come Web App con tutte le API (user + admin)
 - ✅ SHEET_ID corretto nel codice
 - ✅ Fogli "Risposte del modulo 1" e "Gestione Pulmini" esistono
 - ✅ Frontend può chiamare GAS via GET senza errori CORS
 - ✅ Login riconosce CF dal foglio
 - ✅ Prenotazioni si salvano nel foglio
-- ✅ Admin può confermare/rifiutare
+- ✅ **🆕 Admin può vedere tutte le prenotazioni**
+- ✅ **🆕 Admin può filtrare per data/stato/targa/cliente**
+- ✅ **🆕 Admin può confermare/rifiutare in batch**
+- ✅ **🆕 Admin può esportare in Excel**
+- ✅ **🆕 Admin vede statistiche e grafici in tempo reale**
 
-🎯 **Il backend è pronto!** Segui i 4 step sopra e il sistema sarà operativo.
+🎯 **Il backend v2.0 con Admin Dashboard Pro è pronto!** Segui i step sopra e il sistema sarà completamente operativo.
+
+---
+
+## 📲 Quick Commands
+
+```powershell
+# Download BACKEND-SETUP aggiornato
+$base = "https://raw.githubusercontent.com/xDren98/imbriani-noleggio/main/"
+Invoke-WebRequest -Uri ($base + "BACKEND-SETUP.md?t=" + [DateTime]::UtcNow.Ticks) -OutFile "BACKEND-SETUP.md"
+Write-Host "✅ BACKEND-SETUP.md aggiornato"
+notepad BACKEND-SETUP.md
+```
