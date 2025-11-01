@@ -1,11 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.1.0 PATCHED
-   + Fix profilo completo + Date ISO format + Enhanced UX + New branding
+   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.2.0 FINAL
+   + Dual homepage + New customer CTA + Complete profile + Date ISO
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
-const VERSION = '6.1.0';
+const VERSION = '6.2.0';
 let clienteCorrente = null;
 let prenotazioniUtente = [];
 let availableVehicles = [];
@@ -76,10 +76,10 @@ function initializeApp() {
     btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
   });
 
-  // New customer CTA
-  const checkAvailabilityCTA = qsId('check-availability-cta');
-  if (checkAvailabilityCTA) {
-    checkAvailabilityCTA.addEventListener('click', handleNewCustomerCTA);
+  // New customer CTA (dual homepage)
+  const newCustomerCTA = qsId('new-customer-cta');
+  if (newCustomerCTA) {
+    newCustomerCTA.addEventListener('click', handleNewCustomerCTA);
   }
 
   // Refresh actions
@@ -170,8 +170,12 @@ async function handleLogin(e) {
 }
 
 function showUserDashboard() {
-  qsId('login-section').classList.add('hidden');
-  qsId('user-dashboard').classList.remove('hidden');
+  // Hide homepage sections and show user dashboard
+  const homepageSections = qsId('homepage-sections');
+  const userDashboard = qsId('user-dashboard');
+  
+  if (homepageSections) homepageSections.classList.add('hidden');
+  if (userDashboard) userDashboard.classList.remove('hidden');
   
   const userName = qsId('user-name');
   if (userName && clienteCorrente) {
@@ -189,43 +193,38 @@ function handleLogout() {
     localStorage.removeItem(key);
   });
   
-  qsId('login-section').classList.remove('hidden');
-  qsId('user-dashboard').classList.add('hidden');
-  qsId('cf-input').value = '';
+  // Show homepage sections and hide user dashboard
+  const homepageSections = qsId('homepage-sections');
+  const userDashboard = qsId('user-dashboard');
   
-  // Reset sections visibility
-  showHomepageSection('login');
+  if (homepageSections) homepageSections.classList.remove('hidden');
+  if (userDashboard) userDashboard.classList.add('hidden');
+  
+  qsId('cf-input').value = '';
   
   showToast('Disconnesso', 'info');
 }
 
 // =====================
-// HOMEPAGE SECTIONS (NEW/EXISTING)
+// NEW CUSTOMER CTA (DUAL HOMEPAGE)
 // =====================
-function showHomepageSection(type) {
-  const newSection = qsId('new-customer-section');
-  const existingSection = qsId('existing-customer-section');
-  
-  if (type === 'new') {
-    // 🎆 NUOVO CLIENTE
-    if (newSection) newSection.classList.remove('hidden');
-    if (existingSection) existingSection.classList.add('hidden');
-  } else {
-    // 📋 CLIENTE ESISTENTE
-    if (newSection) newSection.classList.add('hidden');
-    if (existingSection) existingSection.classList.remove('hidden');
-  }
-}
-
 function handleNewCustomerCTA() {
-  // Switch to existing customer section and open wizard
-  showHomepageSection('existing');
+  // Hide homepage sections and show user dashboard in wizard mode
+  const homepageSections = qsId('homepage-sections');
+  const userDashboard = qsId('user-dashboard');
+  
+  if (homepageSections) homepageSections.classList.add('hidden');
+  if (userDashboard) userDashboard.classList.remove('hidden');
+  
+  // Switch to wizard tab
   switchTab('nuovo');
   
   // Pre-fill dates and go directly to Step 2 (vehicle selection)
   preFillWizardDefaults();
+  
   setTimeout(() => {
     goToStep(2);
+    loadAvailableVehicles();
     showToast('🎆 Ecco i nostri pulmini 9 posti disponibili!', 'info', 4000);
   }, 500);
 }
@@ -238,22 +237,6 @@ async function loadInitialData() {
     loadUserBookings(),
     loadAvailableVehicles()
   ]);
-  
-  // Decide homepage layout based on booking history
-  decideDashboardLayout();
-}
-
-function decideDashboardLayout() {
-  const hasBookings = prenotazioniUtente.length > 0;
-  const isNewCustomer = !clienteCorrente?.ultimoAutista;
-  
-  if (hasBookings || !isNewCustomer) {
-    // Cliente esistente con prenotazioni
-    showHomepageSection('existing');
-  } else {
-    // Nuovo cliente - mostra CTA
-    showHomepageSection('new');
-  }
 }
 
 async function loadUserBookings() {
@@ -540,7 +523,7 @@ function addDriver(isFirst = false) {
     return;
   }
   
-  // 🎯 Auto-fill data from last booking if first driver
+  // 🎯 Auto-fill data from last booking if first driver and existing customer
   const prefillData = isFirst && clienteCorrente?.ultimoAutista ? clienteCorrente.ultimoAutista : {};
   
   const driverForm = document.createElement('div');
@@ -592,7 +575,7 @@ function createDriverFormHTML(index, isFirst, prefillData) {
       <div class="form-row">
         <div class="form-group">
           <label>Codice Fiscale:</label>
-          <input type="text" class="driver-cf" maxlength="16" value="${prefillData.CF || (isFirst ? clienteCorrente?.CF || '' : '')}" required>
+          <input type="text" class="driver-cf" maxlength="16" value="${prefillData.CF || (isFirst && clienteCorrente ? clienteCorrente.CF || '' : '')}" required>
         </div>
         <div class="form-group">
           <label>Data di nascita:</label>
@@ -802,7 +785,7 @@ async function submitBooking() {
   showLoader(true);
   
   const payload = {
-    cf: clienteCorrente.CF,
+    cf: clienteCorrente?.CF || bookingData.drivers[0]?.CF, // Use first driver CF if no customer logged in
     ...bookingData,
     drivers: encodeURIComponent(JSON.stringify(bookingData.drivers))
   };
@@ -817,10 +800,20 @@ async function submitBooking() {
       clearBookingDraft();
       resetWizard();
       
-      // Switch to bookings and refresh
-      showHomepageSection('existing');
-      switchTab('prenotazioni');
-      await loadUserBookings();
+      // If not logged in (new customer), show homepage
+      if (!clienteCorrente) {
+        const homepageSections = qsId('homepage-sections');
+        const userDashboard = qsId('user-dashboard');
+        
+        if (homepageSections) homepageSections.classList.remove('hidden');
+        if (userDashboard) userDashboard.classList.add('hidden');
+        
+        showToast('🎉 Grazie per aver scelto Imbriani Stefano Noleggio!', 'info', 3000);
+      } else {
+        // If logged in, show bookings tab
+        switchTab('prenotazioni');
+        await loadUserBookings();
+      }
       
     } else {
       showToast(response.message || 'Errore durante la prenotazione', 'danger');
@@ -934,4 +927,4 @@ function resetWizard() {
   clearBookingDraft();
 }
 
-console.log('%c🔧 Scripts v6.1.0 PATCHED loaded successfully', 'color: #28a745; font-weight: bold;');
+console.log('%c🔧 Scripts v6.2.0 FINAL loaded successfully', 'color: #28a745; font-weight: bold;');
