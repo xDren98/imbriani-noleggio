@@ -1,11 +1,11 @@
-/* ═══════════════════════════════════════════════════════════════════════════════════════════
-   IMBRIANI STEFANO NOLEGGIO - scripts.js v7.0.0 WEEKEND PREMIUM
-   + WhatsApp ASCII Fix + Admin Dashboard + Dark Mode Ready
-   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+/* ================================================================================
+   IMBRIANI STEFANO NOLEGGIO - scripts.js v7.0.1 COMPLETE + ASCII FIX
+   + All functions restored + WhatsApp ASCII only message
+   ================================================================================ */
 
 'use strict';
 
-const VERSION = '7.0.0';
+const VERSION = '7.0.1';
 const PHONE_NUMBER = '3286589618';
 const MAX_WHATSAPP_PER_WINDOW = 3;
 const RATE_LIMIT_WINDOW = 10 * 60 * 1000; // 10 minutes
@@ -24,10 +24,10 @@ let whatsappCount = 0;
 let whatsappTimestamps = [];
 let voiceRecognition = null;
 
-console.log(`%c🚀 Imbriani Stefano Noleggio v${VERSION} WEEKEND PREMIUM`, 'font-size: 14px; font-weight: bold; color: #007f17;');
+console.log(`%c[VAN] Imbriani Stefano Noleggio v${VERSION} COMPLETE RESTORED`, 'font-size: 14px; font-weight: bold; color: #007f17;');
 
 // =====================
-// DATE UTILITIES (Enhanced with Italian format)
+// DATE UTILITIES
 // =====================
 function toISODate(value) {
   if (!value) return '';
@@ -39,15 +39,14 @@ function toISODate(value) {
   // Already ISO yyyy-MM-dd
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // dd/MM/yyyy or dd-MM-yyyy (from spreadsheet)
+  // dd/MM/yyyy or dd-MM-yyyy
   let m = s.match(/^(\d{2})[/\-](\d{2})[/\-](\d{4})$/);
   if (m) return `${m[3]}-${m[2]}-${m[1]}`;
 
-  // yyyy-MM-ddTHH:mm:ss(.sss)Z (from API)
+  // yyyy-MM-ddTHH:mm:ss(.sss)Z
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
 
-  // Try Date parsing as fallback
   try {
     const d = new Date(s);
     if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
@@ -56,17 +55,27 @@ function toISODate(value) {
   return '';
 }
 
-// 🇮🇹 Convert ISO date to Italian format for Google Sheets
 function toItalianDate(isoDate) {
   if (!isoDate) return '';
-  
-  // ISO yyyy-MM-dd -> dd/MM/yyyy
   const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (match) {
     return `${match[3]}/${match[2]}/${match[1]}`;
   }
-  
-  return isoDate; // fallback
+  return isoDate;
+}
+
+function formattaDataIT(dateObj) {
+  if (!dateObj) return '';
+  if (typeof dateObj === 'string') {
+    const match = dateObj.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+    return dateObj;
+  }
+  const d = new Date(dateObj);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 function composeAddress(via, civico, comune) {
@@ -75,7 +84,7 @@ function composeAddress(via, civico, comune) {
 }
 
 // =====================
-// WHATSAPP ASCII-ONLY MESSAGE (Fixed for all devices)
+// WHATSAPP ASCII-ONLY MESSAGE (FIXED)
 // =====================
 function buildPreventivoMessage() {
   const { dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione, targa, selectedVehicle } = bookingData;
@@ -95,7 +104,7 @@ function buildPreventivoMessage() {
   
   const posti = selectedVehicle?.Posti || '9';
   
-  // 📱 100% ASCII MESSAGE - No Unicode, No Emoji, No Special Characters
+  // 100% ASCII MESSAGE - No Unicode, No Emoji, No Special Characters
   return `PREVENTIVO PULMINO IMBRIANI
 ===========================
 Dal: ${formattaDataIT(dataRitiro)} alle ${oraRitiro}
@@ -112,7 +121,6 @@ function updatePreventivoSummary() {
   const container = qsId('preventivo-details');
   if (!container || !bookingData.targa) return;
   
-  // Calculate duration for display
   const startDate = new Date(`${bookingData.dataRitiro}T${bookingData.oraRitiro}:00`);
   const endDate = new Date(`${bookingData.dataConsegna}T${bookingData.oraConsegna}:00`);
   const diffMs = endDate - startDate;
@@ -128,11 +136,11 @@ function updatePreventivoSummary() {
   const posti = bookingData.selectedVehicle?.Posti || '9';
   
   container.innerHTML = `
-    <div class="summary-row"><span>🚐 Pulmino:</span> <strong>${bookingData.targa} (${posti} posti)</strong></div>
-    <div class="summary-row"><span>📅 Ritiro:</span> <strong>${formattaDataIT(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</strong></div>
-    <div class="summary-row"><span>📅 Consegna:</span> <strong>${formattaDataIT(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</strong></div>
-    <div class="summary-row"><span>🎯 Destinazione:</span> <strong>${bookingData.destinazione}</strong></div>
-    <div class="summary-row"><span>⏰ Durata:</span> <strong>${durationText}</strong></div>
+    <div class="summary-row"><span>[VAN] Pulmino:</span> <strong>${bookingData.targa} (${posti} posti)</strong></div>
+    <div class="summary-row"><span>[CAL] Ritiro:</span> <strong>${formattaDataIT(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</strong></div>
+    <div class="summary-row"><span>[CAL] Consegna:</span> <strong>${formattaDataIT(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</strong></div>
+    <div class="summary-row"><span>[TARGET] Destinazione:</span> <strong>${bookingData.destinazione}</strong></div>
+    <div class="summary-row"><span>[TIME] Durata:</span> <strong>${durationText}</strong></div>
   `;
 }
 
@@ -141,20 +149,15 @@ function updatePreventivoSummary() {
 // =====================
 function checkRateLimit() {
   const now = Date.now();
-  
-  // Clean old timestamps
   whatsappTimestamps = whatsappTimestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
-  
   return whatsappTimestamps.length < MAX_WHATSAPP_PER_WINDOW;
 }
 
 function getRateLimitTimeRemaining() {
   if (whatsappTimestamps.length === 0) return 0;
-  
   const oldestTimestamp = Math.min(...whatsappTimestamps);
   const timeRemaining = RATE_LIMIT_WINDOW - (Date.now() - oldestTimestamp);
-  
-  return Math.max(0, Math.ceil(timeRemaining / 1000 / 60)); // minutes
+  return Math.max(0, Math.ceil(timeRemaining / 1000 / 60));
 }
 
 function showRateLimitWarning() {
@@ -163,7 +166,6 @@ function showRateLimitWarning() {
   
   if (warning) {
     warning.classList.remove('hidden');
-    
     if (timer) {
       const minutes = getRateLimitTimeRemaining();
       timer.textContent = `${minutes} minuto${minutes > 1 ? 'i' : ''}`;
@@ -192,7 +194,7 @@ function showCallingHoursWarning() {
 // =====================
 function initVoiceInput() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    console.log('🎤 Voice recognition not supported');
+    console.log('[MIC] Voice recognition not supported');
     const voiceBtn = qsId('voice-input-btn');
     if (voiceBtn) voiceBtn.style.display = 'none';
     return;
@@ -210,12 +212,12 @@ function initVoiceInput() {
     if (destinazioneInput) {
       destinazioneInput.value = transcript;
       destinazioneInput.focus();
-      showToast(`🎤 Registrato: ${transcript}`, 'success');
+      showToast(`[MIC] Registrato: ${transcript}`, 'success');
     }
   };
   
   voiceRecognition.onerror = (event) => {
-    showToast('🎤 Errore registrazione vocale', 'warning');
+    showToast('[MIC] Errore registrazione vocale', 'warning');
   };
   
   const voiceBtn = qsId('voice-input-btn');
@@ -223,7 +225,7 @@ function initVoiceInput() {
     voiceBtn.addEventListener('click', () => {
       if (voiceRecognition) {
         voiceBtn.classList.add('recording');
-        showToast('🎤 Parla ora...', 'info', 3000);
+        showToast('[MIC] Parla ora...', 'info', 3000);
         voiceRecognition.start();
         
         setTimeout(() => {
@@ -241,108 +243,596 @@ function initContrastMode() {
   const contrastToggle = qsId('contrast-toggle');
   if (!contrastToggle) return;
   
-  // Check saved preference
   const contrastEnabled = localStorage.getItem('contrast-mode') === '1';
   if (contrastEnabled) {
     document.body.classList.add('high-contrast');
-    contrastToggle.textContent = '🔅';
+    contrastToggle.textContent = '[**]';
   }
   
   contrastToggle.addEventListener('click', () => {
     const isEnabled = document.body.classList.toggle('high-contrast');
     localStorage.setItem('contrast-mode', isEnabled ? '1' : '0');
-    contrastToggle.textContent = isEnabled ? '🔅' : '🔆';
-    showToast(isEnabled ? '🔆 Contrasto elevato attivato' : '🔅 Contrasto normale', 'info');
+    contrastToggle.textContent = isEnabled ? '[**]' : '[*]';
+    showToast(isEnabled ? '[**] Contrasto elevato attivato' : '[*] Contrasto normale', 'info');
   });
 }
 
 // =====================
-// KEYBOARD SHORTCUTS
+// DOM HELPERS
 // =====================
-function initKeyboardShortcuts() {
-  document.addEventListener('keydown', (e) => {
-    // ESC = back to previous step
-    if (e.key === 'Escape' && stepAttuale > 1) {
-      e.preventDefault();
-      goToStep(stepAttuale - 1);
-      showToast('⬅ Step precedente', 'info');
+function qs(selector) {
+  return document.querySelector(selector);
+}
+
+function qsAll(selector) {
+  return document.querySelectorAll(selector);
+}
+
+function qsId(id) {
+  return document.getElementById(id);
+}
+
+function showElement(elem, show = true) {
+  if (elem) elem.classList.toggle('hidden', !show);
+}
+
+// =====================
+// AUTHENTICATION
+// =====================
+function isValidCF(cf) {
+  const cfUpper = String(cf).toUpperCase().trim();
+  if (cfUpper.length !== 16) return false;
+  return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(cfUpper);
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  
+  const cfInput = qsId('cf-input');
+  const cf = cfInput.value.toUpperCase().trim();
+  
+  if (!isValidCF(cf)) {
+    showToast('[!] CF non valido (16 caratteri A-Z/0-9)', 'error');
+    return;
+  }
+  
+  showLoader(true);
+  
+  try {
+    const response = await callAPI('getUserData', { cf });
+    
+    if (response.success) {
+      clienteCorrente = response.data;
+      localStorage.setItem(FRONTEND_CONFIG.storage.CF, cf);
+      
+      showToast(`[OK] Benvenuto ${clienteCorrente.NomeCompleto || 'Cliente'}!`, 'success');
+      
+      // Hide homepage sections
+      const homepageSections = qsId('homepage-sections');
+      if (homepageSections) homepageSections.classList.add('hidden');
+      
+      // Show dashboard
+      const dashboard = qsId('user-dashboard');
+      if (dashboard) dashboard.classList.remove('hidden');
+      
+      // Update user info
+      const userName = qsId('user-name');
+      if (userName) userName.textContent = clienteCorrente.NomeCompleto || 'Cliente';
+      
+      // Load user bookings
+      await loadUserBookings();
+      
+    } else {
+      showToast(`[X] ${response.message || 'Errore login'}`, 'error');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showToast('[X] Errore di connessione', 'error');
+  } finally {
+    showLoader(false);
+  }
+}
+
+function handleLogout() {
+  clienteCorrente = null;
+  localStorage.removeItem(FRONTEND_CONFIG.storage.CF);
+  
+  // Show homepage sections
+  const homepageSections = qsId('homepage-sections');
+  if (homepageSections) homepageSections.classList.remove('hidden');
+  
+  // Hide dashboard
+  const dashboard = qsId('user-dashboard');
+  if (dashboard) dashboard.classList.add('hidden');
+  
+  // Clear CF input
+  const cfInput = qsId('cf-input');
+  if (cfInput) cfInput.value = '';
+  
+  showToast('[EXIT] Disconnesso', 'info');
+}
+
+// =====================
+// NEW CUSTOMER CTA
+// =====================
+function handleNewCustomerCTA() {
+  // Auto-fill tomorrow's date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+  
+  // Set default pickup date
+  const dataRitiro = qsId('data-ritiro');
+  if (dataRitiro) dataRitiro.value = tomorrowISO;
+  
+  // Set default return date (day after tomorrow)
+  const dayAfterTomorrow = new Date(tomorrow);
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+  const dayAfterTomorrowISO = dayAfterTomorrow.toISOString().slice(0, 10);
+  
+  const dataConsegna = qsId('data-consegna');
+  if (dataConsegna) dataConsegna.value = dayAfterTomorrowISO;
+  
+  // Set default times
+  const oraRitiro = qsId('ora-ritiro');
+  const oraConsegna = qsId('ora-consegna');
+  if (oraRitiro) oraRitiro.value = '08:00';
+  if (oraConsegna) oraConsegna.value = '20:00';
+  
+  // Hide homepage and show dashboard with new booking tab
+  const homepageSections = qsId('homepage-sections');
+  if (homepageSections) homepageSections.classList.add('hidden');
+  
+  const dashboard = qsId('user-dashboard');
+  if (dashboard) dashboard.classList.remove('hidden');
+  
+  // Switch to new booking tab
+  switchTab('nuovo');
+  
+  // Go to step 1
+  goToStep(1);
+  
+  showToast('[GO] Date preimpostate per domani!', 'info');
+}
+
+// =====================
+// TAB MANAGEMENT
+// =====================
+function switchTab(tabName) {
+  // Update tab buttons
+  qsAll('.tab-button').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+  });
+  
+  // Update tab contents
+  qsAll('.tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === `${tabName}-tab`);
+  });
+  
+  // Load data if needed
+  if (tabName === 'prenotazioni') {
+    loadUserBookings();
+  } else if (tabName === 'nuovo') {
+    loadAvailableVehicles();
+  }
+}
+
+// =====================
+// WIZARD MANAGEMENT
+// =====================
+function goToStep(step) {
+  stepAttuale = step;
+  
+  // Update wizard steps visibility
+  for (let i = 1; i <= 5; i++) {
+    const stepEl = qsId(`step-${i}`);
+    if (stepEl) showElement(stepEl, i === step);
+  }
+  
+  // Update progress indicators
+  updateProgressIndicators();
+  updateBreadcrumbs();
+  
+  // Step-specific logic
+  if (step === 2) {
+    loadAvailableVehicles();
+  } else if (step === 3) {
+    updatePreventivoSummary();
+    checkPreventivoStatus();
+  } else if (step === 4) {
+    if (!bookingData.drivers || bookingData.drivers.length === 0) {
+      addDriver(); // Add first driver
+    }
+    renderDrivers();
+  } else if (step === 5) {
+    generateBookingSummary();
+  }
+}
+
+function validateAndGoToStep(targetStep) {
+  if (validateCurrentStep()) {
+    goToStep(targetStep);
+  }
+}
+
+function validateCurrentStep() {
+  switch (stepAttuale) {
+    case 1:
+      return validateStep1();
+    case 2:
+      return validateStep2();
+    case 3:
+      return validateStep3();
+    case 4:
+      return validateStep4();
+    default:
+      return true;
+  }
+}
+
+function validateStep1() {
+  const dataRitiro = qsId('data-ritiro')?.value;
+  const oraRitiro = qsId('ora-ritiro')?.value;
+  const dataConsegna = qsId('data-consegna')?.value;
+  const oraConsegna = qsId('ora-consegna')?.value;
+  const destinazione = qsId('destinazione')?.value?.trim();
+  
+  if (!dataRitiro || !oraRitiro || !dataConsegna || !oraConsegna || !destinazione) {
+    showToast('[!] Compila tutti i campi', 'warning');
+    return false;
+  }
+  
+  const startDate = new Date(`${dataRitiro}T${oraRitiro}:00`);
+  const endDate = new Date(`${dataConsegna}T${oraConsegna}:00`);
+  
+  if (startDate >= endDate) {
+    showToast('[!] Data/ora consegna deve essere dopo il ritiro', 'warning');
+    return false;
+  }
+  
+  // Save to booking data
+  bookingData = {
+    ...bookingData,
+    dataRitiro,
+    oraRitiro,
+    dataConsegna,
+    oraConsegna,
+    destinazione
+  };
+  
+  saveDraftData();
+  return true;
+}
+
+function validateStep2() {
+  if (!bookingData.selectedVehicle || !bookingData.targa) {
+    showToast('[!] Seleziona un pulmino', 'warning');
+    return false;
+  }
+  return true;
+}
+
+function validateStep3() {
+  if (!preventivoRequested) {
+    showToast('[!] Richiedi il preventivo prima di continuare', 'warning');
+    return false;
+  }
+  return true;
+}
+
+function validateStep4() {
+  if (!bookingData.drivers || bookingData.drivers.length === 0) {
+    showToast('[!] Aggiungi almeno un autista', 'warning');
+    return false;
+  }
+  
+  // Check CF duplicates
+  if (!checkCFDuplicates()) {
+    return false;
+  }
+  
+  // Validate all drivers
+  for (const driver of bookingData.drivers) {
+    if (!driver.nome || !driver.cognome || !driver.cf || !driver.dataNascita || !driver.numeroPatente) {
+      showToast('[!] Completa i dati di tutti gli autisti', 'warning');
+      return false;
     }
     
-    // CTRL+ENTER = next step
-    if (e.ctrlKey && e.key === 'Enter') {
-      e.preventDefault();
-      const nextBtn = document.querySelector(`#step${stepAttuale}-next, #step${stepAttuale}-confirm`);
-      if (nextBtn && !nextBtn.disabled) {
-        nextBtn.click();
-      }
+    if (!isValidCF(driver.cf)) {
+      showToast(`[!] CF non valido per ${driver.nome} ${driver.cognome}`, 'warning');
+      return false;
     }
-    
-    // F1 = help
-    if (e.key === 'F1') {
-      e.preventDefault();
-      showToast('🎯 Scorciatoie: ESC=Indietro | Ctrl+Enter=Avanti | Tab=Naviga', 'info', 5000);
-    }
+  }
+  
+  return true;
+}
+
+// =====================
+// PROGRESS INDICATORS
+// =====================
+function updateProgressIndicators() {
+  qsAll('.progress-step').forEach((step, index) => {
+    const stepNum = index + 1;
+    step.classList.toggle('active', stepNum === stepAttuale);
+    step.classList.toggle('completed', stepNum < stepAttuale);
+  });
+}
+
+function updateBreadcrumbs() {
+  qsAll('.breadcrumb-item').forEach((item, index) => {
+    const stepNum = index + 1;
+    item.classList.toggle('active', stepNum === stepAttuale);
+    item.classList.toggle('completed', stepNum < stepAttuale);
   });
 }
 
 // =====================
-// SWIPE NAVIGATION (Mobile)
+// VEHICLE MANAGEMENT
 // =====================
-function initSwipeNavigation() {
-  let startX = null;
-  let startY = null;
+async function loadAvailableVehicles() {
+  const vehiclesList = qsId('veicoli-list');
+  if (!vehiclesList) return;
   
-  const handleTouchStart = (e) => {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-  };
+  try {
+    const response = await callAPI('getAvailableVehicles', {
+      dataInizio: bookingData.dataRitiro || '',
+      dataFine: bookingData.dataConsegna || ''
+    });
+    
+    if (response.success && response.data) {
+      availableVehicles = response.data;
+      renderVehicles();
+    } else {
+      vehiclesList.innerHTML = '<p>[!] Errore caricamento veicoli</p>';
+    }
+  } catch (error) {
+    console.error('Error loading vehicles:', error);
+    vehiclesList.innerHTML = '<p>[!] Errore di connessione</p>';
+  }
+}
+
+function renderVehicles() {
+  const vehiclesList = qsId('veicoli-list');
+  if (!vehiclesList) return;
   
-  const handleTouchEnd = (e) => {
-    if (!startX || !startY) return;
-    
-    const endX = e.changedTouches[0].clientX;
-    const endY = e.changedTouches[0].clientY;
-    
-    const deltaX = endX - startX;
-    const deltaY = endY - startY;
-    
-    // Check if horizontal swipe (not vertical scroll)
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-      if (deltaX > 0 && stepAttuale > 1) {
-        // Swipe right = previous step
-        goToStep(stepAttuale - 1);
-        showToast('👈 Step precedente', 'info');
-      } else if (deltaX < 0 && stepAttuale < 5) {
-        // Swipe left = next step (if allowed)
-        const nextBtn = document.querySelector(`#step${stepAttuale}-next`);
-        if (nextBtn && !nextBtn.disabled) {
-          validateAndGoToStep(stepAttuale + 1);
-        }
-      }
+  if (!availableVehicles || availableVehicles.length === 0) {
+    vehiclesList.innerHTML = '<p>[EMPTY] Nessun pulmino disponibile per le date selezionate</p>';
+    return;
+  }
+  
+  vehiclesList.innerHTML = '';
+  
+  availableVehicles.forEach(vehicle => {
+    const vehicleCard = document.createElement('div');
+    vehicleCard.className = 'vehicle-card';
+    if (bookingData.targa === vehicle.Targa) {
+      vehicleCard.classList.add('selected');
     }
     
-    startX = startY = null;
-  };
+    vehicleCard.innerHTML = `
+      <div class="vehicle-info">
+        <div class="vehicle-header">
+          <h5>${vehicle.Targa}</h5>
+          <span class="badge badge-success">[+] 9 posti</span>
+        </div>
+        <div class="vehicle-details">
+          <p><strong>${vehicle.Marca || 'Marca'}</strong> ${vehicle.Modello || 'Modello'}</p>
+          <p>[CAR] ${vehicle.Colore || 'Colore non specificato'}</p>
+          <p class="availability">[OK] Disponibile</p>
+        </div>
+      </div>
+    `;
+    
+    vehicleCard.addEventListener('click', () => selectVehicle(vehicle));
+    vehiclesList.appendChild(vehicleCard);
+  });
+}
+
+function selectVehicle(vehicle) {
+  // Update booking data
+  bookingData.selectedVehicle = vehicle;
+  bookingData.targa = vehicle.Targa;
   
-  document.addEventListener('touchstart', handleTouchStart, { passive: true });
-  document.addEventListener('touchend', handleTouchEnd, { passive: true });
+  // Update UI
+  qsAll('.vehicle-card').forEach(card => card.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  
+  // Enable next button
+  const nextBtn = qsId('step2-next');
+  if (nextBtn) nextBtn.disabled = false;
+  
+  showToast(`[VAN] Selezionato: ${vehicle.Targa}`, 'success');
+  saveDraftData();
 }
 
 // =====================
-// CF DUPLICATE CHECK
+// PREVENTIVO HANDLERS
 // =====================
+function handleCallPreventivo() {
+  if (!isWithinCallingHours()) {
+    showCallingHoursWarning();
+    setTimeout(() => {
+      const warning = qsId('calling-hours-warning');
+      if (warning) warning.classList.add('hidden');
+    }, 5000);
+  }
+  
+  window.open(`tel:${PHONE_NUMBER}`);
+  markPreventivoRequested();
+  showToast('[PHONE] Apertura dialer... Dopo la chiamata torna qui!', 'info', 4000);
+}
+
+function handleWhatsAppPreventivo() {
+  if (!checkRateLimit()) {
+    showRateLimitWarning();
+    return;
+  }
+  
+  const message = buildPreventivoMessage();
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappURL = `https://wa.me/39${PHONE_NUMBER}?text=${encodedMessage}`;
+  
+  whatsappTimestamps.push(Date.now());
+  whatsappCount++;
+  
+  window.open(whatsappURL, '_blank');
+  markPreventivoRequested();
+  showToast('[MSG] WhatsApp aperto! Dopo invio torna qui per completare', 'success', 4000);
+}
+
+function markPreventivoRequested() {
+  preventivoRequested = true;
+  localStorage.setItem('PREVENTIVO_REQUESTED', '1');
+  
+  const statusDiv = qsId('preventivo-completed');
+  if (statusDiv) statusDiv.classList.remove('hidden');
+  
+  const rateWarning = qsId('rate-limit-warning');
+  const hourWarning = qsId('calling-hours-warning');
+  if (rateWarning) rateWarning.classList.add('hidden');
+  if (hourWarning) hourWarning.classList.add('hidden');
+  
+  const nextBtn = qsId('step3-next');
+  if (nextBtn) {
+    nextBtn.disabled = false;
+    nextBtn.classList.add('btn-pulse');
+  }
+}
+
+function checkPreventivoStatus() {
+  const requested = localStorage.getItem('PREVENTIVO_REQUESTED') === '1';
+  if (requested) {
+    preventivoRequested = true;
+    const statusDiv = qsId('preventivo-completed');
+    if (statusDiv) statusDiv.classList.remove('hidden');
+    
+    const nextBtn = qsId('step3-next');
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.classList.add('btn-pulse');
+    }
+  }
+}
+
+// =====================
+// DRIVER MANAGEMENT
+// =====================
+function addDriver() {
+  if (!bookingData.drivers) bookingData.drivers = [];
+  
+  if (bookingData.drivers.length >= 3) {
+    showToast('[!] Massimo 3 autisti', 'warning');
+    return;
+  }
+  
+  const newDriver = {
+    id: Date.now(),
+    nome: '',
+    cognome: '',
+    cf: '',
+    dataNascita: '',
+    numeroPatente: ''
+  };
+  
+  bookingData.drivers.push(newDriver);
+  renderDrivers();
+  updateStep4NextButton();
+}
+
+function renderDrivers() {
+  const container = qsId('autisti-container');
+  if (!container) return;
+  
+  if (!bookingData.drivers || bookingData.drivers.length === 0) {
+    container.innerHTML = '<p>[EMPTY] Nessun autista aggiunto</p>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  
+  bookingData.drivers.forEach((driver, index) => {
+    const driverDiv = document.createElement('div');
+    driverDiv.className = 'driver-row';
+    driverDiv.innerHTML = `
+      <div class="driver-header">
+        <h6>[USER] Autista ${index + 1}</h6>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDriver(${index})">[X] Rimuovi</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome:</label>
+          <input type="text" class="form-control driver-nome" value="${driver.nome}" data-index="${index}">
+        </div>
+        <div class="form-group">
+          <label>Cognome:</label>
+          <input type="text" class="form-control driver-cognome" value="${driver.cognome}" data-index="${index}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Codice Fiscale:</label>
+          <input type="text" class="form-control driver-cf" value="${driver.cf}" data-index="${index}" maxlength="16">
+        </div>
+        <div class="form-group">
+          <label>Data di Nascita:</label>
+          <input type="date" class="form-control driver-data-nascita" value="${driver.dataNascita}" data-index="${index}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Numero Patente:</label>
+        <input type="text" class="form-control driver-patente" value="${driver.numeroPatente}" data-index="${index}">
+      </div>
+    `;
+    
+    container.appendChild(driverDiv);
+  });
+  
+  // Add event listeners
+  container.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', updateDriverData);
+  });
+}
+
+function updateDriverData(event) {
+  const input = event.target;
+  const index = parseInt(input.dataset.index);
+  const field = input.className.split(' ').find(cls => cls.startsWith('driver-')).replace('driver-', '');
+  
+  if (bookingData.drivers && bookingData.drivers[index]) {
+    bookingData.drivers[index][field === 'cf' ? 'cf' : field === 'data-nascita' ? 'dataNascita' : field === 'patente' ? 'numeroPatente' : field] = input.value;
+    saveDraftData();
+    updateStep4NextButton();
+  }
+}
+
+function removeDriver(index) {
+  if (bookingData.drivers && bookingData.drivers[index]) {
+    bookingData.drivers.splice(index, 1);
+    renderDrivers();
+    updateStep4NextButton();
+    saveDraftData();
+    showToast('[X] Autista rimosso', 'info');
+  }
+}
+
+function updateStep4NextButton() {
+  const nextBtn = qsId('step4-next');
+  if (nextBtn) {
+    const hasDrivers = bookingData.drivers && bookingData.drivers.length > 0;
+    nextBtn.disabled = !hasDrivers;
+  }
+}
+
 function checkCFDuplicates() {
   const cfInputs = document.querySelectorAll('.driver-cf');
   const cfValues = Array.from(cfInputs).map(input => input.value.toUpperCase().trim()).filter(cf => cf.length === 16);
   
-  // Find duplicates
   const duplicates = cfValues.filter((cf, index) => cfValues.indexOf(cf) !== index);
   
   const warning = qsId('cf-duplicate-warning');
   if (warning) {
     if (duplicates.length > 0) {
       warning.classList.remove('hidden');
-      // Highlight duplicate fields
       cfInputs.forEach(input => {
         const value = input.value.toUpperCase().trim();
         if (duplicates.includes(value)) {
@@ -352,13 +842,255 @@ function checkCFDuplicates() {
       return false;
     } else {
       warning.classList.add('hidden');
-      // Remove error highlights
       cfInputs.forEach(input => input.classList.remove('error'));
       return true;
     }
   }
   
   return duplicates.length === 0;
+}
+
+// =====================
+// BOOKING MANAGEMENT
+// =====================
+async function loadUserBookings() {
+  const bookingsList = qsId('prenotazioni-list');
+  const emptyState = qsId('empty-bookings');
+  
+  if (!bookingsList) return;
+  
+  try {
+    let response;
+    
+    if (clienteCorrente) {
+      response = await callAPI('getUserBookings', { cf: clienteCorrente.CF });
+    } else {
+      // For anonymous users, check if there are any saved bookings
+      response = { success: true, data: [] };
+    }
+    
+    if (response.success) {
+      prenotazioniUtente = response.data || [];
+      
+      if (prenotazioniUtente.length === 0) {
+        bookingsList.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+      } else {
+        bookingsList.classList.remove('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+        renderBookings();
+      }
+    } else {
+      showToast('[X] Errore caricamento prenotazioni', 'error');
+    }
+  } catch (error) {
+    console.error('Error loading bookings:', error);
+    showToast('[X] Errore di connessione', 'error');
+  }
+}
+
+function renderBookings() {
+  const bookingsList = qsId('prenotazioni-list');
+  if (!bookingsList || !prenotazioniUtente) return;
+  
+  bookingsList.innerHTML = '';
+  
+  prenotazioniUtente.forEach(booking => {
+    const bookingCard = document.createElement('div');
+    bookingCard.className = 'booking-card';
+    
+    const statusClass = getStatusClass(booking.Stato);
+    const statusLabel = getStatusLabel(booking.Stato);
+    
+    bookingCard.innerHTML = `
+      <div class="booking-header">
+        <h5>${booking.ID}</h5>
+        <span class="badge ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="booking-details">
+        <p><strong>[CAL] Periodo:</strong> ${formattaDataIT(booking.DataRitiro)} ${booking.OraRitiro} - ${formattaDataIT(booking.DataConsegna)} ${booking.OraConsegna}</p>
+        <p><strong>[TARGET] Destinazione:</strong> ${booking.Destinazione}</p>
+        <p><strong>[VAN] Pulmino:</strong> ${booking.Targa || 'TBD'}</p>
+        <p><strong>[TIME] Creata il:</strong> ${formattaDataIT(booking.DataCreazione)}</p>
+      </div>
+    `;
+    
+    bookingsList.appendChild(bookingCard);
+  });
+}
+
+function getStatusClass(status) {
+  const statusMap = {
+    'Confermata': 'badge-success',
+    'Da confermare': 'badge-warning',
+    'Annullata': 'badge-danger'
+  };
+  return statusMap[status] || 'badge-secondary';
+}
+
+function getStatusLabel(status) {
+  const labelMap = {
+    'Confermata': '[OK] Confermata',
+    'Da confermare': '[...] Da confermare',
+    'Annullata': '[X] Annullata'
+  };
+  return labelMap[status] || status;
+}
+
+function generateBookingSummary() {
+  const summaryContainer = qsId('booking-summary');
+  if (!summaryContainer) return;
+  
+  const startDate = new Date(`${bookingData.dataRitiro}T${bookingData.oraRitiro}:00`);
+  const endDate = new Date(`${bookingData.dataConsegna}T${bookingData.oraConsegna}:00`);
+  const diffMs = endDate - startDate;
+  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(diffHours / 24);
+  const hours = diffHours % 24;
+  
+  let durationText = '';
+  if (days > 0 && hours > 0) durationText = `${days} giorni e ${hours} ore`;
+  else if (days > 0) durationText = `${days} giorni`;
+  else durationText = `${hours} ore`;
+  
+  summaryContainer.innerHTML = `
+    <div class="summary-section">
+      <h4>[LIST] Riepilogo Prenotazione</h4>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <label>[CAL] Ritiro:</label>
+          <span>${formattaDataIT(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</span>
+        </div>
+        <div class="summary-item">
+          <label>[CAL] Consegna:</label>
+          <span>${formattaDataIT(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</span>
+        </div>
+        <div class="summary-item">
+          <label>[TIME] Durata:</label>
+          <span>${durationText}</span>
+        </div>
+        <div class="summary-item">
+          <label>[TARGET] Destinazione:</label>
+          <span>${bookingData.destinazione}</span>
+        </div>
+        <div class="summary-item">
+          <label>[VAN] Pulmino:</label>
+          <span>${bookingData.targa} (${bookingData.selectedVehicle?.Posti || '9'} posti)</span>
+        </div>
+        <div class="summary-item">
+          <label>[USERS] Autisti:</label>
+          <span>${bookingData.drivers?.length || 0}</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="summary-section">
+      <h5>[USERS] Dettagli Autisti</h5>
+      <div class="drivers-summary">
+        ${bookingData.drivers?.map((driver, index) => `
+          <div class="driver-summary">
+            <strong>[USER] Autista ${index + 1}:</strong> ${driver.nome} ${driver.cognome}<br>
+            <small>CF: ${driver.cf} | Patente: ${driver.numeroPatente}</small>
+          </div>
+        `).join('') || '<p>[EMPTY] Nessun autista</p>'}
+      </div>
+    </div>
+  `;
+}
+
+async function submitBooking() {
+  if (!validateStep4()) return;
+  
+  showLoader(true);
+  
+  try {
+    const bookingPayload = {
+      cf: clienteCorrente?.CF || 'ANONYMOUS',
+      dataRitiro: bookingData.dataRitiro,
+      oraRitiro: bookingData.oraRitiro,
+      dataConsegna: bookingData.dataConsegna,
+      oraConsegna: bookingData.oraConsegna,
+      destinazione: bookingData.destinazione,
+      targa: bookingData.targa,
+      drivers: bookingData.drivers
+    };
+    
+    const response = await callAPI('createBooking', bookingPayload);
+    
+    if (response.success) {
+      showToast('[OK] Prenotazione inviata con successo!', 'success');
+      
+      // Clear draft data
+      localStorage.removeItem('BOOKING_DRAFT');
+      localStorage.removeItem('PREVENTIVO_REQUESTED');
+      
+      // Reset booking data
+      bookingData = {};
+      preventivoRequested = false;
+      
+      // Go back to bookings tab
+      switchTab('prenotazioni');
+      loadUserBookings();
+      
+    } else {
+      showToast(`[X] ${response.message || 'Errore invio prenotazione'}`, 'error');
+    }
+  } catch (error) {
+    console.error('Error submitting booking:', error);
+    showToast('[X] Errore di connessione', 'error');
+  } finally {
+    showLoader(false);
+  }
+}
+
+// =====================
+// DRAFT MANAGEMENT
+// =====================
+function saveDraftData() {
+  try {
+    localStorage.setItem('BOOKING_DRAFT', JSON.stringify(bookingData));
+  } catch (error) {
+    console.error('Error saving draft:', error);
+  }
+}
+
+function loadDraftData() {
+  try {
+    const draft = localStorage.getItem('BOOKING_DRAFT');
+    if (draft) {
+      bookingData = JSON.parse(draft);
+      
+      // Restore form values
+      if (bookingData.dataRitiro) {
+        const dataRitiro = qsId('data-ritiro');
+        if (dataRitiro) dataRitiro.value = bookingData.dataRitiro;
+      }
+      
+      if (bookingData.oraRitiro) {
+        const oraRitiro = qsId('ora-ritiro');
+        if (oraRitiro) oraRitiro.value = bookingData.oraRitiro;
+      }
+      
+      if (bookingData.dataConsegna) {
+        const dataConsegna = qsId('data-consegna');
+        if (dataConsegna) dataConsegna.value = bookingData.dataConsegna;
+      }
+      
+      if (bookingData.oraConsegna) {
+        const oraConsegna = qsId('ora-consegna');
+        if (oraConsegna) oraConsegna.value = bookingData.oraConsegna;
+      }
+      
+      if (bookingData.destinazione) {
+        const destinazione = qsId('destinazione');
+        if (destinazione) destinazione.value = bookingData.destinazione;
+      }
+      
+      showToast('[SAVE] Bozza ripristinata', 'info');
+    }
+  } catch (error) {
+    console.error('Error loading draft:', error);
+  }
 }
 
 // =====================
@@ -384,68 +1116,15 @@ function showAutoSaveIndicator() {
 }
 
 // =====================
-// BREADCRUMB NAVIGATION
-// =====================
-function initBreadcrumbs() {
-  document.querySelectorAll('.breadcrumb-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const targetStep = parseInt(item.getAttribute('data-step'));
-      if (targetStep <= stepAttuale || canAccessStep(targetStep)) {
-        goToStep(targetStep);
-      }
-    });
-  });
-}
-
-function updateBreadcrumbs() {
-  document.querySelectorAll('.breadcrumb-item').forEach((item, index) => {
-    const stepNum = index + 1;
-    item.classList.toggle('active', stepNum === stepAttuale);
-    item.classList.toggle('completed', stepNum < stepAttuale);
-    item.classList.toggle('accessible', stepNum <= stepAttuale || canAccessStep(stepNum));
-  });
-}
-
-function canAccessStep(stepNum) {
-  // Step access logic
-  if (stepNum <= 2) return true;
-  if (stepNum === 3) return bookingData.selectedVehicle;
-  if (stepNum === 4) return preventivoRequested;
-  if (stepNum === 5) return bookingData.drivers?.length > 0;
-  return false;
-}
-
-// =====================
-// FULL NAME VALIDATION
-// =====================
-function validateFullName(input) {
-  const name = input.value.trim();
-  const words = name.split(/\s+/).filter(w => w.length > 0);
-  
-  if (words.length >= 2) {
-    input.classList.remove('error');
-    input.classList.add('valid');
-    return true;
-  } else {
-    input.classList.remove('valid');
-    input.classList.add('error');
-    return false;
-  }
-}
-
-// =====================
 // INIT & DOM READY
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
   initializeApp();
   checkExistingSession();
-  setupAutoSaveDraft();
+  loadDraftData();
   initAutoSave();
   initVoiceInput();
   initContrastMode();
-  initKeyboardShortcuts();
-  initSwipeNavigation();
-  initBreadcrumbs();
 });
 
 function initializeApp() {
@@ -457,19 +1136,19 @@ function initializeApp() {
   const logoutBtn = qsId('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-  // Wizard navigation
-  setupWizardNavigation();
-
-  // Tab navigation (existing customers)
-  document.querySelectorAll('.tab-button').forEach(btn => {
-    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
-  });
-
-  // New customer CTA (dual homepage)
+  // New customer CTA
   const newCustomerCTA = qsId('new-customer-cta');
   if (newCustomerCTA) {
     newCustomerCTA.addEventListener('click', handleNewCustomerCTA);
   }
+
+  // Tab navigation
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+  });
+
+  // Wizard navigation
+  setupWizardNavigation();
 
   // Preventivo buttons
   const callBtn = qsId('call-btn');
@@ -482,7 +1161,14 @@ function initializeApp() {
   const refreshBtn = qsId('refresh-bookings');
   if (refreshBtn) refreshBtn.addEventListener('click', loadUserBookings);
 
-  console.log('🔧 App initialized with v7.0.0 Weekend Premium features');
+  // Tab switcher buttons
+  document.querySelectorAll('[data-tab-switch]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchTab(btn.getAttribute('data-tab-switch'));
+    });
+  });
+
+  console.log('[OK] App initialized with v7.0.1 COMPLETE');
 }
 
 function setupWizardNavigation() {
@@ -505,104 +1191,18 @@ function setupWizardNavigation() {
   });
 }
 
-function setupAutoSaveDraft() {
-  const formFields = ['data-ritiro', 'ora-ritiro', 'data-consegna', 'ora-consegna', 'destinazione'];
-  formFields.forEach(id => {
-    const field = qsId(id);
-    if (field) {
-      field.addEventListener('change', startDraftTimer);
-      field.addEventListener('input', startDraftTimer);
-    }
-  });
-}
-
-function startDraftTimer() {
-  if (draftTimer) clearTimeout(draftTimer);
-  draftTimer = setTimeout(saveDraftData, 2000); // Salva dopo 2s di inattività
-}
-
 function checkExistingSession() {
   const savedCF = localStorage.getItem(FRONTEND_CONFIG.storage.CF);
   if (savedCF && isValidCF(savedCF)) {
     const cfInput = qsId('cf-input');
     if (cfInput) cfInput.value = savedCF;
   }
+  
+  // Check preventivo status
+  checkPreventivoStatus();
 }
 
-// =====================
-// PREVENTIVO HANDLERS (Enhanced)
-// =====================
-function handleCallPreventivo() {
-  if (!isWithinCallingHours()) {
-    showCallingHoursWarning();
-    setTimeout(() => {
-      const warning = qsId('calling-hours-warning');
-      if (warning) warning.classList.add('hidden');
-    }, 5000);
-  }
-  
-  window.open(`tel:${PHONE_NUMBER}`);
-  markPreventivoRequested();
-  showToast('📞 Apertura dialer... Dopo la chiamata torna qui!', 'info', 4000);
-}
+// Make functions globally accessible
+window.removeDriver = removeDriver;
 
-function handleWhatsAppPreventivo() {
-  if (!checkRateLimit()) {
-    showRateLimitWarning();
-    return;
-  }
-  
-  const message = buildPreventivoMessage();
-  const encodedMessage = encodeURIComponent(message);
-  const whatsappURL = `https://wa.me/39${PHONE_NUMBER}?text=${encodedMessage}`;
-  
-  // Track WhatsApp usage
-  whatsappTimestamps.push(Date.now());
-  whatsappCount++;
-  
-  window.open(whatsappURL, '_blank');
-  markPreventivoRequested();
-  showToast('📱 WhatsApp aperto! Dopo l\'invio torna qui per completare', 'success', 4000);
-}
-
-function markPreventivoRequested() {
-  preventivoRequested = true;
-  localStorage.setItem('PREVENTIVO_REQUESTED', '1');
-  
-  // Show completion status
-  const statusDiv = qsId('preventivo-completed');
-  if (statusDiv) statusDiv.classList.remove('hidden');
-  
-  // Hide warnings
-  const rateWarning = qsId('rate-limit-warning');
-  const hourWarning = qsId('calling-hours-warning');
-  if (rateWarning) rateWarning.classList.add('hidden');
-  if (hourWarning) hourWarning.classList.add('hidden');
-  
-  // Enable next button with pulse effect
-  const nextBtn = qsId('step3-next');
-  if (nextBtn) {
-    nextBtn.disabled = false;
-    nextBtn.classList.add('btn-pulse');
-  }
-}
-
-function checkPreventivoStatus() {
-  const requested = localStorage.getItem('PREVENTIVO_REQUESTED') === '1';
-  if (requested) {
-    preventivoRequested = true;
-    const statusDiv = qsId('preventivo-completed');
-    if (statusDiv) statusDiv.classList.remove('hidden');
-    
-    const nextBtn = qsId('step3-next');
-    if (nextBtn) {
-      nextBtn.disabled = false;
-      nextBtn.classList.add('btn-pulse');
-    }
-  }
-}
-
-// Rest of the file remains the same as v6.4.0 but with WhatsApp fix applied
-// [Previous authentication, wizard, vehicle management, booking functions continue unchanged]
-
-console.log('%c🚀 Scripts v7.0.0 WEEKEND PREMIUM loaded - WhatsApp ASCII fixed!', 'color: #28a745; font-weight: bold;');
+console.log('%c[OK] Scripts v7.0.1 COMPLETE loaded - All functions restored!', 'color: #28a745; font-weight: bold;');
