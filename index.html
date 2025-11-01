@@ -9,8 +9,8 @@
 </head>
 <body>
   <!-- CONTRAST MODE TOGGLE -->
-  <button id="contrast-toggle" class="contrast-toggle" aria-label="Attiva modalità contrasto elevato">
-    🔆
+  <button id="contrast-toggle" class="contrast-toggle" aria-label="Attiva modalita contrasto elevato">
+    [*]
   </button>
 
   <!-- LOADING OVERLAY -->
@@ -24,7 +24,7 @@
     <!-- HEADER -->
     <header class="header">
       <div class="header-content">
-        <h1 class="logo">🚐 Imbriani Stefano Noleggio</h1>
+        <h1 class="logo">[VAN] Imbriani Stefano Noleggio</h1>
       </div>
     </header>
 
@@ -34,15 +34,15 @@
       <!-- HOMEPAGE DUAL SECTIONS (always visible) -->
       <div id="homepage-sections" class="homepage-sections">
         
-        <!-- GIÀ CLIENTE SECTION -->
+        <!-- GIA CLIENTE SECTION -->
         <div class="customer-section existing-customer">
-          <div class="section-icon">👤</div>
-          <h2>Sei già nostro cliente?</h2>
+          <div class="section-icon">[USER]</div>
+          <h2>Sei gia nostro cliente?</h2>
           <p>Accedi con il tuo codice fiscale per gestire le prenotazioni</p>
           
           <form id="login-form" class="form">
             <div class="form-group">
-              <label for="cf-input">🆔 Codice Fiscale:</label>
+              <label for="cf-input">[ID] Codice Fiscale:</label>
               <input 
                 type="text" 
                 id="cf-input" 
@@ -54,42 +54,42 @@
               <div class="input-hint">Il tuo codice fiscale (16 caratteri)</div>
             </div>
             <button type="submit" class="btn btn-primary btn-full">
-              <span class="btn-text">🚪 Accedi al tuo Account</span>
+              <span class="btn-text">[>] Accedi al tuo Account</span>
               <div class="btn-spinner hidden"></div>
             </button>
           </form>
           
           <div class="section-benefits">
-            <p><strong>✅ Con il tuo account puoi:</strong></p>
+            <p><strong>[+] Con il tuo account puoi:</strong></p>
             <ul>
-              <li>📋 Visualizzare le tue prenotazioni</li>
-              <li>🔄 Seguire lo stato delle richieste</li>
-              <li>⚡ Prenotazione rapida con dati salvati</li>
+              <li>[LIST] Visualizzare le tue prenotazioni</li>
+              <li>[SYNC] Seguire lo stato delle richieste</li>
+              <li>[FAST] Prenotazione rapida con dati salvati</li>
             </ul>
           </div>
         </div>
 
         <!-- NUOVO CLIENTE SECTION -->
         <div class="customer-section new-customer">
-          <div class="section-icon">🎆</div>
+          <div class="section-icon">[NEW]</div>
           <h2>Nuovo cliente?</h2>
-          <p>Verifica subito la disponibilità dei nostri pulmini 9 posti!</p>
+          <p>Verifica subito la disponibilita dei nostri pulmini 9 posti!</p>
           
           <button id="new-customer-cta" class="btn btn-success btn-full btn-large">
-            🔍 Verifica Disponibilità Pulmini
+            [SEARCH] Verifica Disponibilita Pulmini
           </button>
           
           <div class="section-benefits">
-            <p><strong>🎯 Senza registrazione:</strong></p>
+            <p><strong>[TARGET] Senza registrazione:</strong></p>
             <ul>
-              <li>🚀 Controlla subito i pulmini disponibili</li>
-              <li>📅 Date già preimpostate per domani</li>
-              <li>📝 Compila i dati solo alla fine</li>
+              <li>[GO] Controlla subito i pulmini disponibili</li>
+              <li>[CAL] Date gia preimpostate per domani</li>
+              <li>[FORM] Compila i dati solo alla fine</li>
             </ul>
           </div>
           
           <div class="new-customer-note">
-            <p><small>💡 <strong>Non serve registrazione:</strong> controlla subito i pulmini disponibili e compila i dati più avanti nel processo di prenotazione.</small></p>
+            <p><small>[INFO] <strong>Non serve registrazione:</strong> controlla subito i pulmini disponibili e compila i dati piu avanti nel processo di prenotazione.</small></p>
           </div>
         </div>
 
@@ -100,11 +100,11 @@
         <!-- User Info -->
         <div class="user-info">
           <div class="user-details">
-            <h2>Benvenuto, <span id="user-name">Cliente</span> 👋</h2>
+            <h2>Benvenuto, <span id="user-name">Cliente</span> [WAVE]</h2>
             <p id="user-subtitle">Gestisci le tue prenotazioni</p>
           </div>
           <button id="logout-btn" class="btn btn-outline" title="Disconnetti">
-            🚪 Esci
+            [EXIT] Esci
           </button>
         </div>
 
@@ -120,8 +120,8 @@
           <!-- PRENOTAZIONI TAB -->
           <div id="prenotazioni-tab" class="tab-content active">
             <div class="section-header">
-              <h3>📋 Le tue prenotazioni</h3>
-              <button id="refresh-bookings" class="btn btn-sm btn-outline">🔄 Aggiorna</button>
+              <h3>[LIST] Le tue prenotazioni</h3>
+              <button id="refresh-bookings" class="btn btn-sm btn-outline">[SYNC] Aggiorna</button>
             </div>
             
             <div id="prenotazioni-list" class="bookings-list">
@@ -132,11 +132,11 @@
             </div>
 
             <div id="empty-bookings" class="empty-state hidden">
-              <div class="empty-icon">📅</div>
+              <div class="empty-icon">[EMPTY]</div>
               <h4>Nessuna prenotazione trovata</h4>
               <p>Non hai ancora effettuato prenotazioni.</p>
               <button class="btn btn-primary" data-tab-switch="nuovo">
-                🎆 Prenota ora
+                [NEW] Prenota ora
               </button>
             </div>
           </div>
@@ -144,28 +144,28 @@
           <!-- NUOVO TAB -->
           <div id="nuovo-tab" class="tab-content">
             <div class="section-header">
-              <h3>🎆 Nuova Prenotazione</h3>
+              <h3>[NEW] Nuova Prenotazione</h3>
               
               <!-- BREADCRUMB NAVIGATION -->
               <div class="breadcrumb-nav">
                 <button class="breadcrumb-item active" data-step="1">
-                  <span class="breadcrumb-icon">📅</span>
+                  <span class="breadcrumb-icon">[CAL]</span>
                   <span class="breadcrumb-text">Date</span>
                 </button>
                 <button class="breadcrumb-item" data-step="2">
-                  <span class="breadcrumb-icon">🚐</span>
+                  <span class="breadcrumb-icon">[VAN]</span>
                   <span class="breadcrumb-text">Pulmino</span>
                 </button>
                 <button class="breadcrumb-item" data-step="3">
-                  <span class="breadcrumb-icon">💰</span>
+                  <span class="breadcrumb-icon">[$$]</span>
                   <span class="breadcrumb-text">Preventivo</span>
                 </button>
                 <button class="breadcrumb-item" data-step="4">
-                  <span class="breadcrumb-icon">👥</span>
+                  <span class="breadcrumb-icon">[USERS]</span>
                   <span class="breadcrumb-text">Autisti</span>
                 </button>
                 <button class="breadcrumb-item" data-step="5">
-                  <span class="breadcrumb-icon">✅</span>
+                  <span class="breadcrumb-icon">[OK]</span>
                   <span class="breadcrumb-text">Conferma</span>
                 </button>
               </div>
@@ -173,19 +173,19 @@
               <!-- PROGRESS BAR -->
               <div class="wizard-progress">
                 <div class="progress-step active" data-step="1">
-                  <span class="step-icon">📅</span>
+                  <span class="step-icon">[CAL]</span>
                 </div>
                 <div class="progress-step" data-step="2">
-                  <span class="step-icon">🚐</span>
+                  <span class="step-icon">[VAN]</span>
                 </div>
                 <div class="progress-step" data-step="3">
-                  <span class="step-icon">💰</span>
+                  <span class="step-icon">[$$]</span>
                 </div>
                 <div class="progress-step" data-step="4">
-                  <span class="step-icon">👥</span>
+                  <span class="step-icon">[USERS]</span>
                 </div>
                 <div class="progress-step" data-step="5">
-                  <span class="step-icon">✅</span>
+                  <span class="step-icon">[OK]</span>
                 </div>
               </div>
             </div>
@@ -193,17 +193,17 @@
             <!-- STEP 1: Date e Orari -->
             <div id="step-1" class="wizard-step active">
               <div class="step-header">
-                <h4>📅 Step 1: Seleziona Date e Orario</h4>
+                <h4>[CAL] Step 1: Seleziona Date e Orario</h4>
                 <p class="step-description">Scegli il periodo per il tuo noleggio</p>
               </div>
               <form id="step1-form" class="form">
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="data-ritiro">📅 Data Ritiro:</label>
+                    <label for="data-ritiro">[CAL] Data Ritiro:</label>
                     <input type="date" id="data-ritiro" required>
                   </div>
                   <div class="form-group">
-                    <label for="ora-ritiro">🕕 Ora Ritiro:</label>
+                    <label for="ora-ritiro">[TIME] Ora Ritiro:</label>
                     <select id="ora-ritiro" required>
                       <option value="">Seleziona orario</option>
                       <option value="08:00">08:00 - Mattina</option>
@@ -215,11 +215,11 @@
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="data-consegna">📅 Data Consegna:</label>
+                    <label for="data-consegna">[CAL] Data Consegna:</label>
                     <input type="date" id="data-consegna" required>
                   </div>
                   <div class="form-group">
-                    <label for="ora-consegna">🕕 Ora Consegna:</label>
+                    <label for="ora-consegna">[TIME] Ora Consegna:</label>
                     <select id="ora-consegna" required>
                       <option value="">Seleziona orario</option>
                       <option value="08:00">08:00 - Mattina</option>
@@ -230,15 +230,15 @@
                   </div>
                 </div>
                 <div class="form-group">
-                  <label for="destinazione">🎯 Destinazione:</label>
+                  <label for="destinazione">[TARGET] Destinazione:</label>
                   <div class="input-with-voice">
                     <input type="text" id="destinazione" placeholder="Es: Roma Centro, Fiumicino Aeroporto, Ostia Lido" required>
-                    <button type="button" id="voice-input-btn" class="voice-btn" title="Registra vocalmente">🎤</button>
+                    <button type="button" id="voice-input-btn" class="voice-btn" title="Registra vocalmente">[MIC]</button>
                   </div>
                   <div class="input-hint">Specifica la destinazione principale del viaggio</div>
                 </div>
                 <div class="step-actions">
-                  <button type="button" id="step1-next" class="btn btn-primary">Avanti ➡</button>
+                  <button type="button" id="step1-next" class="btn btn-primary">Avanti -></button>
                 </div>
               </form>
             </div>
@@ -246,8 +246,8 @@
             <!-- STEP 2: Selezione Veicolo -->
             <div id="step-2" class="wizard-step">
               <div class="step-header">
-                <h4>🚐 Step 2: Scegli il Pulmino</h4>
-                <p class="step-description">Seleziona il veicolo più adatto alle tue esigenze</p>
+                <h4>[VAN] Step 2: Scegli il Pulmino</h4>
+                <p class="step-description">Seleziona il veicolo piu adatto alle tue esigenze</p>
               </div>
               <div id="veicoli-list" class="vehicles-grid">
                 <div class="loading-placeholder">
@@ -256,27 +256,27 @@
                 </div>
               </div>
               <div class="step-actions">
-                <button type="button" id="step2-back" class="btn btn-outline">⬅ Indietro</button>
-                <button type="button" id="step2-next" class="btn btn-primary" disabled>Richiedi Preventivo ➡</button>
+                <button type="button" id="step2-back" class="btn btn-outline"><- Indietro</button>
+                <button type="button" id="step2-next" class="btn btn-primary" disabled>Richiedi Preventivo -></button>
               </div>
             </div>
 
             <!-- STEP 3: Richiedi Preventivo -->
             <div id="step-3" class="wizard-step">
               <div class="step-header">
-                <h4>💰 Step 3: Richiedi Preventivo</h4>
+                <h4>[$$] Step 3: Richiedi Preventivo</h4>
                 <p class="step-description">Contattaci per un preventivo personalizzato (obbligatorio per tutti)</p>
               </div>
               
               <div class="preventivo-container">
                 <div class="preventivo-info">
-                  <div class="info-icon">💰</div>
+                  <div class="info-icon">[$$]</div>
                   <h5>Preventivo personalizzato necessario</h5>
                   <p>Per garantirti il miglior prezzo, richiedi un preventivo personalizzato. Tutti i clienti devono contattarci prima di procedere:</p>
                 </div>
                 
                 <div class="preventivo-summary">
-                  <h6>📝 Riepilogo della tua richiesta:</h6>
+                  <h6>[LIST] Riepilogo della tua richiesta:</h6>
                   <div id="preventivo-details" class="summary-details">
                     <!-- Popolato dinamicamente -->
                   </div>
@@ -284,45 +284,45 @@
                 
                 <div class="contact-options">
                   <button type="button" id="call-btn" class="btn btn-primary btn-large">
-                    📞 Chiama Ora
+                    [PHONE] Chiama Ora
                     <small>328 658 9618</small>
                   </button>
                   
                   <button type="button" id="whatsapp-btn" class="btn btn-success btn-large">
-                    📱 Invia WhatsApp
+                    [MSG] Invia WhatsApp
                     <small>Messaggio precompilato</small>
                   </button>
                 </div>
                 
                 <div id="preventivo-completed" class="preventivo-status hidden">
-                  <div class="status-icon">✅</div>
+                  <div class="status-icon">[OK]</div>
                   <p><strong>Preventivo richiesto!</strong></p>
                   <p class="status-note">Dopo aver ricevuto il preventivo, torna qui e completa la prenotazione con i dati degli autisti.</p>
                 </div>
 
                 <div id="rate-limit-warning" class="rate-limit-warning hidden">
-                  <div class="warning-icon">⚠️</div>
+                  <div class="warning-icon">[!]</div>
                   <p><strong>Limite raggiunto</strong></p>
-                  <p>Hai già inviato 3 richieste. Attendi <span id="rate-limit-timer"></span> prima di inviare nuovamente.</p>
+                  <p>Hai gia inviato 3 richieste. Attendi <span id="rate-limit-timer"></span> prima di inviare nuovamente.</p>
                 </div>
 
                 <div id="calling-hours-warning" class="calling-hours-warning hidden">
-                  <div class="warning-icon">🕐</div>
+                  <div class="warning-icon">[TIME]</div>
                   <p><strong>Orario per chiamate: 8:00 - 21:00</strong></p>
                   <p>Per rispetto degli orari, ti consigliamo di chiamare tra le 8:00 e le 21:00. Puoi comunque inviare WhatsApp in qualsiasi momento.</p>
                 </div>
               </div>
               
               <div class="step-actions">
-                <button type="button" id="step3-back" class="btn btn-outline">⬅ Indietro</button>
-                <button type="button" id="step3-next" class="btn btn-primary" disabled>Continua con Autisti ➡</button>
+                <button type="button" id="step3-back" class="btn btn-outline"><- Indietro</button>
+                <button type="button" id="step3-next" class="btn btn-primary" disabled>Continua con Autisti -></button>
               </div>
             </div>
 
             <!-- STEP 4: Autisti -->
             <div id="step-4" class="wizard-step">
               <div class="step-header">
-                <h4>👥 Step 4: Dati Autisti</h4>
+                <h4>[USERS] Step 4: Dati Autisti</h4>
                 <p class="step-description">Aggiungi almeno un autista (massimo 3)</p>
               </div>
               <div id="autisti-container">
@@ -330,33 +330,33 @@
               </div>
               <div class="autisti-actions">
                 <button type="button" id="add-autista" class="btn btn-outline">
-                  ➕ Aggiungi Autista
+                  [+] Aggiungi Autista
                 </button>
               </div>
               <div id="cf-duplicate-warning" class="duplicate-warning hidden">
-                <div class="warning-icon">⚠️</div>
+                <div class="warning-icon">[!]</div>
                 <p><strong>Codici Fiscali duplicati</strong></p>
                 <p>Alcuni autisti hanno lo stesso Codice Fiscale. Ogni autista deve avere un CF univoco.</p>
               </div>
               <div class="step-actions">
-                <button type="button" id="step4-back" class="btn btn-outline">⬅ Indietro</button>
-                <button type="button" id="step4-next" class="btn btn-primary" disabled>Avanti ➡</button>
+                <button type="button" id="step4-back" class="btn btn-outline"><- Indietro</button>
+                <button type="button" id="step4-next" class="btn btn-primary" disabled>Avanti -></button>
               </div>
             </div>
 
             <!-- STEP 5: Conferma -->
             <div id="step-5" class="wizard-step">
               <div class="step-header">
-                <h4>✅ Step 5: Conferma Prenotazione</h4>
+                <h4>[OK] Step 5: Conferma Prenotazione</h4>
                 <p class="step-description">Controlla i dati e conferma la tua prenotazione</p>
               </div>
               <div id="booking-summary" class="booking-summary">
                 <!-- Il riepilogo viene generato dinamicamente -->
               </div>
               <div class="step-actions">
-                <button type="button" id="step5-back" class="btn btn-outline">⬅ Indietro</button>
+                <button type="button" id="step5-back" class="btn btn-outline"><- Indietro</button>
                 <button type="button" id="step5-confirm" class="btn btn-success">
-                  ✅ Conferma Prenotazione
+                  [OK] Conferma Prenotazione
                 </button>
               </div>
             </div>
@@ -365,7 +365,7 @@
           <!-- PROFILO TAB -->
           <div id="profilo-tab" class="tab-content">
             <div class="section-header">
-              <h3>👤 Il tuo Profilo</h3>
+              <h3>[USER] Il tuo Profilo</h3>
             </div>
             <form id="profile-form" class="form">
               <div class="form-group">
@@ -395,7 +395,7 @@
               </div>
               <div class="form-group">
                 <label for="profile-indirizzo">Indirizzo Completo:</label>
-                <input type="text" id="profile-indirizzo" placeholder="Via, Numero, CAP, Città" required>
+                <input type="text" id="profile-indirizzo" placeholder="Via, Numero, CAP, Citta" required>
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -409,7 +409,7 @@
               </div>
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">
-                  💾 Salva Modifiche
+                  [SAVE] Salva Modifiche
                 </button>
               </div>
             </form>
@@ -425,7 +425,7 @@
 
   <!-- Auto-save Indicator -->
   <div id="autosave-indicator" class="autosave-indicator hidden">
-    <span class="autosave-icon">💾</span>
+    <span class="autosave-icon">[SAVE]</span>
     <span class="autosave-text">Salvato automaticamente</span>
   </div>
 
