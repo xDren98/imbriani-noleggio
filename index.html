@@ -8,6 +8,11 @@
   <meta name="description" content="Prenota pulmini a Roma con Imbriani Stefano Noleggio. Facile, veloce e sicuro!">
 </head>
 <body>
+  <!-- CONTRAST MODE TOGGLE -->
+  <button id="contrast-toggle" class="contrast-toggle" aria-label="Attiva modalità contrasto elevato">
+    🔆
+  </button>
+
   <!-- LOADING OVERLAY -->
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="spinner"></div>
@@ -141,19 +146,55 @@
           <div id="nuovo-tab" class="tab-content">
             <div class="section-header">
               <h3>🎆 Nuova Prenotazione</h3>
+              
+              <!-- BREADCRUMB NAVIGATION -->
+              <div class="breadcrumb-nav">
+                <button class="breadcrumb-item active" data-step="1">
+                  <span class="breadcrumb-icon">📅</span>
+                  <span class="breadcrumb-text">Date</span>
+                </button>
+                <button class="breadcrumb-item" data-step="2">
+                  <span class="breadcrumb-icon">🚐</span>
+                  <span class="breadcrumb-text">Pulmino</span>
+                </button>
+                <button class="breadcrumb-item" data-step="3">
+                  <span class="breadcrumb-icon">💰</span>
+                  <span class="breadcrumb-text">Preventivo</span>
+                </button>
+                <button class="breadcrumb-item" data-step="4">
+                  <span class="breadcrumb-icon">👥</span>
+                  <span class="breadcrumb-text">Autisti</span>
+                </button>
+                <button class="breadcrumb-item" data-step="5">
+                  <span class="breadcrumb-icon">✅</span>
+                  <span class="breadcrumb-text">Conferma</span>
+                </button>
+              </div>
+              
+              <!-- PROGRESS BAR -->
               <div class="wizard-progress">
-                <div class="progress-step active" data-step="1">1</div>
-                <div class="progress-step" data-step="2">2</div>
-                <div class="progress-step" data-step="3">3</div>
-                <div class="progress-step" data-step="4">4</div>
-                <div class="progress-step" data-step="5">5</div>
+                <div class="progress-step active" data-step="1">
+                  <span class="step-icon">📅</span>
+                </div>
+                <div class="progress-step" data-step="2">
+                  <span class="step-icon">🚐</span>
+                </div>
+                <div class="progress-step" data-step="3">
+                  <span class="step-icon">💰</span>
+                </div>
+                <div class="progress-step" data-step="4">
+                  <span class="step-icon">👥</span>
+                </div>
+                <div class="progress-step" data-step="5">
+                  <span class="step-icon">✅</span>
+                </div>
               </div>
             </div>
 
             <!-- STEP 1: Date e Orari -->
             <div id="step-1" class="wizard-step active">
               <div class="step-header">
-                <h4>Step 1: Seleziona Date e Orario</h4>
+                <h4>📅 Step 1: Seleziona Date e Orario</h4>
                 <p class="step-description">Scegli il periodo per il tuo noleggio</p>
               </div>
               <form id="step1-form" class="form">
@@ -191,7 +232,10 @@
                 </div>
                 <div class="form-group">
                   <label for="destinazione">🎯 Destinazione:</label>
-                  <input type="text" id="destinazione" placeholder="Es: Roma Centro, Fiumicino Aeroporto, Ostia Lido" required>
+                  <div class="input-with-voice">
+                    <input type="text" id="destinazione" placeholder="Es: Roma Centro, Fiumicino Aeroporto, Ostia Lido" required>
+                    <button type="button" id="voice-input-btn" class="voice-btn" title="Registra vocalmente">🎤</button>
+                  </div>
                   <div class="input-hint">Specifica la destinazione principale del viaggio</div>
                 </div>
                 <div class="step-actions">
@@ -203,7 +247,7 @@
             <!-- STEP 2: Selezione Veicolo -->
             <div id="step-2" class="wizard-step">
               <div class="step-header">
-                <h4>Step 2: Scegli il Pulmino</h4>
+                <h4>🚐 Step 2: Scegli il Pulmino</h4>
                 <p class="step-description">Seleziona il veicolo più adatto alle tue esigenze</p>
               </div>
               <div id="veicoli-list" class="vehicles-grid">
@@ -214,22 +258,22 @@
               </div>
               <div class="step-actions">
                 <button type="button" id="step2-back" class="btn btn-outline">⬅ Indietro</button>
-                <button type="button" id="step2-next" class="btn btn-primary" disabled>Avanti ➡</button>
+                <button type="button" id="step2-next" class="btn btn-primary" disabled>Richiedi Preventivo ➡</button>
               </div>
             </div>
 
             <!-- STEP 3: Richiedi Preventivo -->
             <div id="step-3" class="wizard-step">
               <div class="step-header">
-                <h4>Step 3: Richiedi Preventivo</h4>
-                <p class="step-description">Prima di procedere, contattaci per un preventivo personalizzato</p>
+                <h4>💰 Step 3: Richiedi Preventivo</h4>
+                <p class="step-description">Contattaci per un preventivo personalizzato (obbligatorio per tutti)</p>
               </div>
               
               <div class="preventivo-container">
                 <div class="preventivo-info">
                   <div class="info-icon">💰</div>
-                  <h5>Preventivo necessario</h5>
-                  <p>Per completare la prenotazione, è necessario richiedere un preventivo personalizzato. Scegli come contattarci:</p>
+                  <h5>Preventivo personalizzato necessario</h5>
+                  <p>Per garantirti il miglior prezzo, richiedi un preventivo personalizzato. Tutti i clienti devono contattarci prima di procedere:</p>
                 </div>
                 
                 <div class="preventivo-summary">
@@ -256,6 +300,18 @@
                   <p><strong>Preventivo richiesto!</strong></p>
                   <p class="status-note">Dopo aver ricevuto il preventivo, torna qui e completa la prenotazione con i dati degli autisti.</p>
                 </div>
+
+                <div id="rate-limit-warning" class="rate-limit-warning hidden">
+                  <div class="warning-icon">⚠️</div>
+                  <p><strong>Limite raggiunto</strong></p>
+                  <p>Hai già inviato 3 richieste. Attendi <span id="rate-limit-timer"></span> prima di inviare nuovamente.</p>
+                </div>
+
+                <div id="calling-hours-warning" class="calling-hours-warning hidden">
+                  <div class="warning-icon">🕐</div>
+                  <p><strong>Orario per chiamate: 8:00 - 21:00</strong></p>
+                  <p>Per rispetto degli orari, ti consigliamo di chiamare tra le 8:00 e le 21:00. Puoi comunque inviare WhatsApp in qualsiasi momento.</p>
+                </div>
               </div>
               
               <div class="step-actions">
@@ -267,7 +323,7 @@
             <!-- STEP 4: Autisti -->
             <div id="step-4" class="wizard-step">
               <div class="step-header">
-                <h4>Step 4: Dati Autisti</h4>
+                <h4>👥 Step 4: Dati Autisti</h4>
                 <p class="step-description">Aggiungi almeno un autista (massimo 3)</p>
               </div>
               <div id="autisti-container">
@@ -278,6 +334,11 @@
                   ➕ Aggiungi Autista
                 </button>
               </div>
+              <div id="cf-duplicate-warning" class="duplicate-warning hidden">
+                <div class="warning-icon">⚠️</div>
+                <p><strong>Codici Fiscali duplicati</strong></p>
+                <p>Alcuni autisti hanno lo stesso Codice Fiscale. Ogni autista deve avere un CF univoco.</p>
+              </div>
               <div class="step-actions">
                 <button type="button" id="step4-back" class="btn btn-outline">⬅ Indietro</button>
                 <button type="button" id="step4-next" class="btn btn-primary" disabled>Avanti ➡</button>
@@ -287,7 +348,7 @@
             <!-- STEP 5: Conferma -->
             <div id="step-5" class="wizard-step">
               <div class="step-header">
-                <h4>Step 5: Conferma Prenotazione</h4>
+                <h4>✅ Step 5: Conferma Prenotazione</h4>
                 <p class="step-description">Controlla i dati e conferma la tua prenotazione</p>
               </div>
               <div id="booking-summary" class="booking-summary">
@@ -308,15 +369,10 @@
               <h3>👤 Il tuo Profilo</h3>
             </div>
             <form id="profile-form" class="form">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="profile-nome">Nome:</label>
-                  <input type="text" id="profile-nome" required>
-                </div>
-                <div class="form-group">
-                  <label for="profile-cognome">Cognome:</label>
-                  <input type="text" id="profile-cognome" required>
-                </div>
+              <div class="form-group">
+                <label for="profile-nome-completo">Nome Completo:</label>
+                <input type="text" id="profile-nome-completo" placeholder="Es: Mario Rossi" required>
+                <div class="input-hint">Nome e cognome separati da spazio</div>
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -367,6 +423,16 @@
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- Auto-save Indicator -->
+  <div id="autosave-indicator" class="autosave-indicator hidden">
+    <span class="autosave-icon">💾</span>
+    <span class="autosave-text">Salvato automaticamente</span>
+  </div>
+
+  <!-- Touch Swipe Areas (Mobile) -->
+  <div id="swipe-left" class="swipe-area swipe-left hidden"></div>
+  <div id="swipe-right" class="swipe-area swipe-right hidden"></div>
 
   <!-- Scripts -->
   <script src="config.js"></script>
