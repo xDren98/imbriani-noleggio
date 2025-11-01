@@ -1,19 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.2.0 FINAL
-   + Dual homepage + New customer CTA + Complete profile + Date ISO
+   IMBRIANI STEFANO NOLEGGIO - scripts.js v6.3.0 PREVENTIVO
+   + 5-step wizard + Mandatory quote request + Phone/WhatsApp integration
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
-const VERSION = '6.2.0';
+const VERSION = '6.3.0';
+const PHONE_NUMBER = '3286589618';
 let clienteCorrente = null;
 let prenotazioniUtente = [];
 let availableVehicles = [];
 let stepAttuale = 1;
 let bookingData = {};
 let draftTimer = null;
+let preventivoRequested = false;
 
-console.log(`%c🎉 Imbriani Stefano Noleggio v${VERSION}`, 'font-size: 14px; font-weight: bold; color: #007f17;');
+console.log(`%c🎉 Imbriani Stefano Noleggio v${VERSION} + PREVENTIVO`, 'font-size: 14px; font-weight: bold; color: #007f17;');
 
 // =====================
 // DATE UTILITIES (fix warnings yyyy-MM-dd)
@@ -51,6 +53,27 @@ function composeAddress(via, civico, comune) {
 }
 
 // =====================
+// PREVENTIVO UTILITIES
+// =====================
+function buildPreventivoMessage() {
+  const { dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione, targa } = bookingData;
+  
+  return `Ciao! Vorrei un preventivo per il pulmino ${targa} dal ${formattaDataIT(dataRitiro)} ore ${oraRitiro} al ${formattaDataIT(dataConsegna)} ore ${oraConsegna}, destinazione: ${destinazione}. Grazie!`;
+}
+
+function updatePreventivoSummary() {
+  const container = qsId('preventivo-details');
+  if (!container || !bookingData.targa) return;
+  
+  container.innerHTML = `
+    <div class="summary-row"><span>🚗 Pulmino:</span> <strong>${bookingData.targa}</strong></div>
+    <div class="summary-row"><span>📅 Ritiro:</span> <strong>${formattaDataIT(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</strong></div>
+    <div class="summary-row"><span>📅 Consegna:</span> <strong>${formattaDataIT(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</strong></div>
+    <div class="summary-row"><span>🎯 Destinazione:</span> <strong>${bookingData.destinazione}</strong></div>
+  `;
+}
+
+// =====================
 // INIT & DOM READY
 // =====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,11 +105,18 @@ function initializeApp() {
     newCustomerCTA.addEventListener('click', handleNewCustomerCTA);
   }
 
+  // Preventivo buttons
+  const callBtn = qsId('call-btn');
+  if (callBtn) callBtn.addEventListener('click', handleCallPreventivo);
+  
+  const whatsappBtn = qsId('whatsapp-btn');
+  if (whatsappBtn) whatsappBtn.addEventListener('click', handleWhatsAppPreventivo);
+
   // Refresh actions
   const refreshBtn = qsId('refresh-bookings');
   if (refreshBtn) refreshBtn.addEventListener('click', loadUserBookings);
 
-  console.log('🔧 App initialized');
+  console.log('🔧 App initialized with preventivo step');
 }
 
 function setupWizardNavigation() {
@@ -97,7 +127,9 @@ function setupWizardNavigation() {
     'step3-back': () => goToStep(2),
     'step3-next': () => validateAndGoToStep(4),
     'step4-back': () => goToStep(3),
-    'step4-confirm': () => submitBooking(),
+    'step4-next': () => validateAndGoToStep(5),
+    'step5-back': () => goToStep(4),
+    'step5-confirm': () => submitBooking(),
     'add-autista': () => addDriver()
   };
 
@@ -128,6 +160,56 @@ function checkExistingSession() {
   if (savedCF && isValidCF(savedCF)) {
     const cfInput = qsId('cf-input');
     if (cfInput) cfInput.value = savedCF;
+  }
+}
+
+// =====================
+// PREVENTIVO HANDLERS
+// =====================
+function handleCallPreventivo() {
+  window.open(`tel:${PHONE_NUMBER}`);
+  markPreventivoRequested();
+  showToast('📞 Apertura dialer... Dopo la chiamata torna qui!', 'info', 4000);
+}
+
+function handleWhatsAppPreventivo() {
+  const message = buildPreventivoMessage();
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappURL = `https://wa.me/39${PHONE_NUMBER}?text=${encodedMessage}`;
+  
+  window.open(whatsappURL, '_blank');
+  markPreventivoRequested();
+  showToast('📱 WhatsApp aperto! Dopo l\'invio torna qui per completare', 'success', 4000);
+}
+
+function markPreventivoRequested() {
+  preventivoRequested = true;
+  localStorage.setItem('PREVENTIVO_REQUESTED', '1');
+  
+  // Show completion status
+  const statusDiv = qsId('preventivo-completed');
+  if (statusDiv) statusDiv.classList.remove('hidden');
+  
+  // Enable next button
+  const nextBtn = qsId('step3-next');
+  if (nextBtn) {
+    nextBtn.disabled = false;
+    nextBtn.classList.add('btn-pulse');
+  }
+}
+
+function checkPreventivoStatus() {
+  const requested = localStorage.getItem('PREVENTIVO_REQUESTED') === '1';
+  if (requested) {
+    preventivoRequested = true;
+    const statusDiv = qsId('preventivo-completed');
+    if (statusDiv) statusDiv.classList.remove('hidden');
+    
+    const nextBtn = qsId('step3-next');
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.classList.add('btn-pulse');
+    }
   }
 }
 
@@ -187,11 +269,13 @@ function handleLogout() {
   clienteCorrente = null;
   prenotazioniUtente = [];
   availableVehicles = [];
+  preventivoRequested = false;
   clearBookingDraft();
   
   Object.values(FRONTEND_CONFIG.storage).forEach(key => {
     localStorage.removeItem(key);
   });
+  localStorage.removeItem('PREVENTIVO_REQUESTED');
   
   // Show homepage sections and hide user dashboard
   const homepageSections = qsId('homepage-sections');
@@ -292,7 +376,7 @@ function switchTab(tabName) {
 }
 
 // =====================
-// WIZARD MANAGEMENT
+// WIZARD MANAGEMENT (5 STEPS)
 // =====================
 function prepareWizard() {
   // Load saved draft if available
@@ -310,6 +394,10 @@ function prepareWizard() {
   // Clear and re-add first driver
   const container = qsId('autisti-container');
   if (container) container.innerHTML = '';
+  
+  // Reset preventivo status
+  preventivoRequested = false;
+  localStorage.removeItem('PREVENTIVO_REQUESTED');
   
   setTimeout(() => addDriver(true), 100); // First driver with auto-fill
 }
@@ -352,7 +440,7 @@ function preFillWizardDefaults() {
 }
 
 function goToStep(stepNum) {
-  // Update progress indicators
+  // Update progress indicators (5 steps)
   document.querySelectorAll('.progress-step').forEach((step, idx) => {
     step.classList.toggle('active', idx + 1 <= stepNum);
     step.classList.toggle('completed', idx + 1 < stepNum);
@@ -365,11 +453,17 @@ function goToStep(stepNum) {
   
   stepAttuale = stepNum;
   
+  // Step 3 specific: update preventivo summary
+  if (stepNum === 3) {
+    updatePreventivoSummary();
+    checkPreventivoStatus();
+  }
+  
   // Auto-focus primo campo del step
   setTimeout(() => {
     const activeStep = document.querySelector('.wizard-step.active');
-    const firstInput = activeStep?.querySelector('input:not([readonly]), select');
-    if (firstInput && !firstInput.value) firstInput.focus();
+    const firstInput = activeStep?.querySelector('input:not([readonly]), select, button:not(:disabled)');
+    if (firstInput && stepNum !== 3) firstInput.focus(); // Skip focus on preventivo step
   }, 100);
   
   // Auto-scroll to step
@@ -394,6 +488,14 @@ function validateAndGoToStep(stepNum) {
   }
   
   if (stepNum === 4) {
+    // Check preventivo requirement
+    if (!preventivoRequested && localStorage.getItem('PREVENTIVO_REQUESTED') !== '1') {
+      showToast('📞 Prima richiedi un preventivo chiamando o scrivendo su WhatsApp', 'warning');
+      return;
+    }
+  }
+  
+  if (stepNum === 5) {
     const drivers = collectDriverData();
     if (!drivers.length) {
       showToast('Aggiungi almeno un autista valido', 'warning');
@@ -459,6 +561,11 @@ function collectStep1Data() {
     oraConsegna: qsId('ora-consegna').value,
     destinazione: qsId('destinazione').value.trim()
   };
+  
+  // Reset preventivo quando cambiano le date/pulmino
+  preventivoRequested = false;
+  localStorage.removeItem('PREVENTIVO_REQUESTED');
+  
   saveBookingDraft(bookingData);
 }
 
@@ -501,6 +608,10 @@ function selectVehicle(targa, element) {
   // Save selected vehicle
   bookingData.selectedVehicle = availableVehicles.find(v => v.Targa === targa);
   bookingData.targa = targa;
+  
+  // Reset preventivo when vehicle changes
+  preventivoRequested = false;
+  localStorage.removeItem('PREVENTIVO_REQUESTED');
   
   // Enable next button
   const nextBtn = qsId('step2-next');
@@ -659,7 +770,7 @@ function updateDriverNumbers() {
 
 function updateDriverValidation() {
   const driversCount = document.querySelectorAll('.driver-form').length;
-  const nextBtn = qsId('step3-next');
+  const nextBtn = qsId('step4-next');
   if (nextBtn) {
     nextBtn.disabled = driversCount < FRONTEND_CONFIG.validation.MIN_AUTISTI;
   }
@@ -772,6 +883,7 @@ function updateBookingSummary() {
     <div class="booking-note">
       <p><strong>🎯 Nota:</strong> Dopo l'invio riceverai un ID prenotazione univoco formato <code>BOOK-2025-XXX</code></p>
       <p><small>La prenotazione sarà in stato "Da Confermare" fino all'approvazione dell'admin.</small></p>
+      <p><strong>💰 Preventivo già richiesto</strong> - La prenotazione includerà il preventivo concordato.</p>
     </div>
   `;
 }
@@ -782,12 +894,18 @@ async function submitBooking() {
     return;
   }
   
+  if (!preventivoRequested && localStorage.getItem('PREVENTIVO_REQUESTED') !== '1') {
+    showToast('💰 Prima richiedi un preventivo!', 'danger');
+    return;
+  }
+  
   showLoader(true);
   
   const payload = {
     cf: clienteCorrente?.CF || bookingData.drivers[0]?.CF, // Use first driver CF if no customer logged in
     ...bookingData,
-    drivers: encodeURIComponent(JSON.stringify(bookingData.drivers))
+    drivers: encodeURIComponent(JSON.stringify(bookingData.drivers)),
+    preventivoRichiesto: true // Flag per backend
   };
   delete payload.selectedVehicle; // Non serve nel backend
   
@@ -796,8 +914,9 @@ async function submitBooking() {
     
     if (response.success) {
       const bookingID = response.data?.id || 'N/A';
-      showToast(`✅ Prenotazione ${bookingID} inviata con successo!`, 'success', 5000);
+      showToast(`✅ Prenotazione ${bookingID} inviata con preventivo!`, 'success', 5000);
       clearBookingDraft();
+      localStorage.removeItem('PREVENTIVO_REQUESTED');
       resetWizard();
       
       // If not logged in (new customer), show homepage
@@ -914,6 +1033,8 @@ function restoreDraftData(draft) {
 function resetWizard() {
   stepAttuale = 1;
   bookingData = {};
+  preventivoRequested = false;
+  localStorage.removeItem('PREVENTIVO_REQUESTED');
   goToStep(1);
   
   // Clear drivers container
@@ -927,4 +1048,4 @@ function resetWizard() {
   clearBookingDraft();
 }
 
-console.log('%c🔧 Scripts v6.2.0 FINAL loaded successfully', 'color: #28a745; font-weight: bold;');
+console.log('%c🔧 Scripts v6.3.0 PREVENTIVO loaded successfully', 'color: #28a745; font-weight: bold;');
