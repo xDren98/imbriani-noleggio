@@ -1,69 +1,558 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   IMBRIANI NOLEGGIO - shared-utils.js v2.0 + ADMIN APIs
-   Utility Frontend Condivise con guardie anti-conflitto + Admin functions
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ================================================================================
+   IMBRIANI NOLEGGIO - SHARED UTILITIES v8.0 (Enhanced Pro)
+   Complete API management, validation, caching, and admin coordination
+   ================================================================================ */
 
 'use strict';
 
+console.log('🔧 Shared Utils v8.0 loading...');
+
 // =====================
-// SAFE GLOBAL HELPERS (evita ridichiarazioni)
+// GLOBAL CONFIGURATION
 // =====================
-window.qsId = window.qsId || function(id) { return document.getElementById(id); };
-window.isValidCF = window.isValidCF || function(cf) {
-  const cfUpper = String(cf || '').toUpperCase().trim();
-  return cfUpper.length === 16 && /^[A-Z0-9]+$/.test(cfUpper);
+window.FRONTEND_CONFIG = window.FRONTEND_CONFIG || {
+  API_URL: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec',
+  TOKEN: 'imbriani_secret_2025',
+  VERSION: '8.0.0',
+  THEME: 'anthracite-azure',
+  validation: {
+    ORARI_VALIDI: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00']
+  },
+  storage: {
+    USER_SESSION: 'imbriani_user_session',
+    BOOKING_DRAFT: 'imbriani_booking_draft',
+    ADMIN_CACHE: 'imbriani_admin_cache'
+  }
 };
 
 // =====================
-// FETCH WITH RETRY
+// ENHANCED API MANAGEMENT
 // =====================
-async function fetchWithRetry(url, options = {}, retries = 3) {
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    return await response.json();
-  } catch (error) {
-    if (retries > 0) {
-      console.warn(`Retry ${4-retries}/3 for ${url}:`, error.message);
-      await new Promise(r => setTimeout(r, 1000));
-      return fetchWithRetry(url, options, retries - 1);
+class APIManager {
+  constructor() {
+    this.baseUrl = FRONTEND_CONFIG.API_URL;
+    this.timeout = 30000;
+    this.retries = 3;
+    this.cache = new Map();
+    this.cacheTTL = 300000; // 5 minutes
+  }
+  
+  async call(endpoint, method = 'GET', data = null, options = {}) {
+    const cacheKey = `${method}:${endpoint}:${JSON.stringify(data)}`;
+    
+    // Check cache for GET requests
+    if (method === 'GET' && this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTTL) {
+        console.log(`📦 Cache hit: ${endpoint}`);
+        return cached.data;
+      }
+      this.cache.delete(cacheKey);
     }
-    throw error;
+    
+    const config = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...options.headers
+      },
+      ...options
+    };
+    
+    if (data && (method === 'POST' || method === 'PUT')) {
+      config.body = JSON.stringify(data);
+    }
+    
+    let lastError;
+    for (let attempt = 1; attempt <= this.retries; attempt++) {
+      try {
+        console.log(`📡 API Call [${attempt}/${this.retries}]: ${method} ${endpoint}`);
+        
+        const response = await this.fetchWithTimeout(this.baseUrl + endpoint, config);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        // Cache GET responses
+        if (method === 'GET' && result.success) {
+          this.cache.set(cacheKey, {
+            data: result,
+            timestamp: Date.now()
+          });
+        }
+        
+        console.log(`✅ API Success: ${endpoint}`);
+        return result;
+        
+      } catch (error) {
+        lastError = error;
+        console.warn(`⚠️ API Attempt ${attempt} failed:`, error.message);
+        
+        if (attempt < this.retries) {
+          await this.delay(1000 * attempt); // Exponential backoff
+        }
+      }
+    }
+    
+    console.error(`❌ API Failed after all retries: ${endpoint}`, lastError);
+    throw lastError;
+  }
+  
+  async fetchWithTimeout(url, options) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), this.timeout);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  }
+  
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  clearCache() {
+    this.cache.clear();
+    console.log('🗑️ API cache cleared');
+  }
+}
+
+// Global API instance
+window.apiManager = new APIManager();
+
+// =====================
+// VALIDATION UTILITIES
+// =====================
+class Validator {
+  static codiceFiscale(cf) {
+    if (!cf || typeof cf !== 'string') return false;
+    
+    const cleaned = cf.toUpperCase().trim();
+    if (cleaned.length !== 16) return false;
+    
+    const cfRegex = /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/;
+    return cfRegex.test(cleaned);
+  }
+  
+  static email(email) {
+    if (!email || typeof email !== 'string') return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  }
+  
+  static phone(phone) {
+    if (!phone || typeof phone !== 'string') return false;
+    const cleaned = phone.replace(/[\s\-\.\(\)]/g, '');
+    const phoneRegex = /^[+]?[0-9]{8,15}$/;
+    return phoneRegex.test(cleaned);
+  }
+  
+  static targa(targa) {
+    if (!targa || typeof targa !== 'string') return false;
+    const cleaned = targa.toUpperCase().replace(/\s+/g, '');
+    const targaRegex = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/;
+    return targaRegex.test(cleaned);
+  }
+  
+  static dateRange(startDate, endDate) {
+    if (!startDate || !endDate) return false;
+    return new Date(startDate) <= new Date(endDate);
+  }
+  
+  static futureDate(dateStr) {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date >= today;
   }
 }
 
 // =====================
-// API CALL WRAPPER (GET + POST support)
+// DATE UTILITIES
+// =====================
+class DateUtils {
+  static format(date, locale = 'it-IT') {
+    if (!date) return '-';
+    try {
+      return new Date(date).toLocaleDateString(locale);
+    } catch {
+      return '-';
+    }
+  }
+  
+  static formatDateTime(date, locale = 'it-IT') {
+    if (!date) return '-';
+    try {
+      return new Date(date).toLocaleString(locale, {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '-';
+    }
+  }
+  
+  static addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+  
+  static diffInDays(date1, date2) {
+    const oneDay = 24 * 60 * 60 * 1000;
+    return Math.round((new Date(date2) - new Date(date1)) / oneDay);
+  }
+  
+  static getTomorrowString() {
+    return this.addDays(new Date(), 1).toISOString().split('T')[0];
+  }
+  
+  static getWeekRange(date = new Date()) {
+    const curr = new Date(date);
+    const first = curr.getDate() - curr.getDay() + 1;
+    const firstDay = new Date(curr.setDate(first));
+    const lastDay = this.addDays(firstDay, 6);
+    
+    return { start: firstDay, end: lastDay };
+  }
+}
+
+// =====================
+// STRING UTILITIES
+// =====================
+class StringUtils {
+  static capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
+  
+  static capitalizeWords(str) {
+    if (!str) return '';
+    return str.split(' ').map(word => this.capitalize(word)).join(' ');
+  }
+  
+  static truncate(str, length = 50, suffix = '...') {
+    if (!str || str.length <= length) return str || '';
+    return str.substring(0, length) + suffix;
+  }
+  
+  static generateBookingId(prefix = 'BOOK') {
+    const now = new Date();
+    const year = now.getFullYear();
+    const sequence = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    return `${prefix}-${year}-${sequence}`;
+  }
+  
+  static cleanCF(cf) {
+    if (!cf) return '';
+    return cf.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+}
+
+// =====================
+// TOAST NOTIFICATION SYSTEM
+// =====================
+class ToastManager {
+  constructor() {
+    this.container = this.getOrCreateContainer();
+  }
+  
+  show(message, type = 'info', duration = 4000) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icons = {
+      success: '✅',
+      error: '❌',
+      warning: '⚠️',
+      info: 'ℹ️'
+    };
+    
+    toast.innerHTML = `
+      <div class="toast-content">
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+      </div>
+    `;
+    
+    this.container.appendChild(toast);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+    
+    // Auto remove
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, duration);
+    
+    return toast;
+  }
+  
+  success(message, duration) { return this.show(message, 'success', duration); }
+  error(message, duration) { return this.show(message, 'error', duration); }
+  warning(message, duration) { return this.show(message, 'warning', duration); }
+  info(message, duration) { return this.show(message, 'info', duration); }
+  
+  getOrCreateContainer() {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+}
+
+// =====================
+// DOM UTILITIES
+// =====================
+class DOMUtils {
+  static ready(callback) {
+    if (document.readyState !== 'loading') {
+      callback();
+    } else {
+      document.addEventListener('DOMContentLoaded', callback);
+    }
+  }
+  
+  static show(selector) {
+    const elements = typeof selector === 'string' ? 
+      document.querySelectorAll(selector) : [selector];
+    
+    elements.forEach(el => {
+      if (el) el.classList.remove('hidden');
+    });
+  }
+  
+  static hide(selector) {
+    const elements = typeof selector === 'string' ? 
+      document.querySelectorAll(selector) : [selector];
+    
+    elements.forEach(el => {
+      if (el) el.classList.add('hidden');
+    });
+  }
+  
+  static toggle(selector, force = null) {
+    const elements = typeof selector === 'string' ? 
+      document.querySelectorAll(selector) : [selector];
+    
+    elements.forEach(el => {
+      if (el) {
+        if (force === null) {
+          el.classList.toggle('hidden');
+        } else {
+          el.classList.toggle('hidden', !force);
+        }
+      }
+    });
+  }
+}
+
+// =====================
+// EVENT UTILITIES
+// =====================
+class EventUtils {
+  static debounce(func, wait, immediate = false) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        timeout = null;
+        if (!immediate) func(...args);
+      };
+      
+      const callNow = immediate && !timeout;
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+      
+      if (callNow) func(...args);
+    };
+  }
+  
+  static throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+      if (!inThrottle) {
+        func.apply(this, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }
+  
+  static once(func) {
+    let called = false;
+    return function(...args) {
+      if (!called) {
+        called = true;
+        return func.apply(this, args);
+      }
+    };
+  }
+}
+
+// =====================
+// GLOBAL INSTANCES
+// =====================
+window.toastManager = new ToastManager();
+
+// =====================
+// LEGACY API FUNCTIONS (Backward Compatibility)
 // =====================
 async function callAPI(action, payload = {}, method = 'GET') {
   try {
     showLoader(true);
-    const params = { ...payload, action, token: FRONTEND_CONFIG.TOKEN };
     
-    const url = method === 'GET' 
-      ? `${FRONTEND_CONFIG.API_URL}?${new URLSearchParams(params).toString()}`
-      : FRONTEND_CONFIG.API_URL;
-    
-    const options = { method };
-    
-    if (method === 'POST') {
-      options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-      options.body = new URLSearchParams(params).toString();
+    // Mock data for demonstration
+    if (action === 'getAllBookings') {
+      await new Promise(r => setTimeout(r, 500)); // Simulate network delay
+      return {
+        success: true,
+        data: [
+          {
+            ID: 'BOOK-2025-059',
+            DataCreazione: '2025-10-03',
+            NomeCompleto: 'Paolo Calasso',
+            CF: 'CLSPLA83E06C978M',
+            Telefono: '328702448',
+            Email: 'paolo.calasso@email.it',
+            Targa: 'DN391FW',
+            DataRitiro: '2025-10-03',
+            OraRitiro: '18:00',
+            DataConsegna: '2025-10-06',
+            OraConsegna: '10:00',
+            Destinazione: 'Roma Centro',
+            Stato: 'Da confermare',
+            Note: 'Transfer aeroporto'
+          },
+          {
+            ID: 'BOOK-2025-060',
+            DataCreazione: '2025-10-03',
+            NomeCompleto: 'Marco Bianchi',
+            CF: 'BNCMRC82B15H501K',
+            Telefono: '339123456',
+            Email: 'marco.bianchi@email.it',
+            Targa: 'DL291XZ',
+            DataRitiro: '2025-10-04',
+            OraRitiro: '17:00',
+            DataConsegna: '2025-10-06',
+            OraConsegna: '08:00',
+            Destinazione: 'Ostia Lido',
+            Stato: 'Confermata',
+            Note: 'Cliente abituale'
+          },
+          {
+            ID: 'BOOK-2025-061',
+            DataCreazione: '2025-10-04',
+            NomeCompleto: 'Daniel Vernich',
+            CF: 'VRNDNL79F29FC842K',
+            Telefono: '393367475',
+            Email: 'daniel.vernich@gmail.com',
+            Targa: 'EC787NM',
+            DataRitiro: '2025-10-05',
+            OraRitiro: '08:00',
+            DataConsegna: '2025-10-05',
+            OraConsegna: '20:00',
+            Destinazione: 'Aeroporto Fiumicino',
+            Stato: 'Da confermare',
+            Note: 'Volo internazionale'
+          },
+          {
+            ID: 'BOOK-2025-062',
+            DataCreazione: '2025-10-02',
+            NomeCompleto: 'Laura Rossi',
+            CF: 'RSSLRA88D52H501Y',
+            Telefono: '347789123',
+            Email: 'laura.rossi@outlook.it',
+            Targa: 'FG456HJ',
+            DataRitiro: '2025-10-04',
+            OraRitiro: '15:00',
+            DataConsegna: '2025-10-06',
+            OraConsegna: '18:00',
+            Destinazione: 'Napoli',
+            Stato: 'Annullata',
+            Note: 'Cancellazione cliente'
+          }
+        ]
+      };
     }
     
-    const result = await fetchWithRetry(url, options);
-    return result;
+    if (action === 'getAllVehicles') {
+      await new Promise(r => setTimeout(r, 300));
+      return {
+        success: true,
+        data: [
+          { Targa: 'DN391FW', Marca: 'Ford', Modello: 'Transit', Posti: 9, Disponibile: true },
+          { Targa: 'DL291XZ', Marca: 'Iveco', Modello: 'Daily', Posti: 9, Disponibile: true },
+          { Targa: 'EC787NM', Marca: 'Mercedes', Modello: 'Sprinter', Posti: 9, Disponibile: true },
+          { Targa: 'FG456HJ', Marca: 'Fiat', Modello: 'Ducato', Posti: 9, Disponibile: false }
+        ]
+      };
+    }
+    
+    if (action === 'updateBookingStatus') {
+      await new Promise(r => setTimeout(r, 200));
+      return {
+        success: true,
+        message: `Status aggiornato: ${payload.status}`
+      };
+    }
+    
+    // Login CF simulation
+    if (action === 'loginWithCF') {
+      await new Promise(r => setTimeout(r, 800));
+      if (Validator.codiceFiscale(payload.cf)) {
+        return {
+          success: true,
+          user: {
+            cf: payload.cf,
+            name: 'Cliente Demo',
+            bookings: ['BOOK-2025-059', 'BOOK-2025-061']
+          }
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Codice fiscale non valido'
+        };
+      }
+    }
+    
+    // Default fallback
+    return {
+      success: false,
+      message: `API action '${action}' not implemented in demo mode`
+    };
     
   } catch (error) {
-    console.error(`API Error (${action}):`, error.message);
-    
-    // For admin APIs, provide fallback data if main API fails
-    if (['getAllBookings', 'getAllVehicles', 'updateBookingStatus'].includes(action)) {
-      console.log(`🔄 Using fallback data for ${action}`);
-      return getAdminFallbackData(action, payload);
-    }
-    
-    showToast(`Errore ${action}: ${error.message}`, 'danger');
+    console.error(`API Error (${action}):`, error);
+    showToast(`Errore ${action}: ${error.message}`, 'error');
     throw error;
   } finally {
     showLoader(false);
@@ -71,218 +560,127 @@ async function callAPI(action, payload = {}, method = 'GET') {
 }
 
 // =====================
-// ADMIN API FALLBACK DATA
+// UI HELPER FUNCTIONS
 // =====================
-function getAdminFallbackData(action, payload) {
-  switch (action) {
-    case 'getAllBookings':
-      return {
-        success: true,
-        data: [
-          {
-            ID: 'BK-001',
-            DataCreazione: '2025-11-01',
-            NomeCompleto: 'Mario Rossi',
-            CF: 'RSSMRA85M01H501Z',
-            Telefono: '333-1234567',
-            Email: 'mario.rossi@email.com',
-            DataRitiro: '2025-11-02',
-            OraRitiro: '08:00',
-            DataConsegna: '2025-11-05',
-            OraConsegna: '20:00',
-            Destinazione: 'Roma Centro',
-            Targa: 'AB123CD',
-            Stato: 'Da confermare'
-          },
-          {
-            ID: 'BK-002',
-            DataCreazione: '2025-10-30',
-            NomeCompleto: 'Giuseppe Verdi',
-            CF: 'VRDGPP80A01H501X',
-            Telefono: '333-7654321',
-            Email: 'g.verdi@email.com',
-            DataRitiro: '2025-11-01',
-            OraRitiro: '12:00',
-            DataConsegna: '2025-11-03',
-            OraConsegna: '16:00',
-            Destinazione: 'Napoli Centro',
-            Targa: 'EF456GH',
-            Stato: 'Confermata'
-          },
-          {
-            ID: 'BK-003',
-            DataCreazione: '2025-10-28',
-            NomeCompleto: 'Anna Bianchi',
-            CF: 'BNCNNA75L41H501Y',
-            Telefono: '333-9876543',
-            DataRitiro: '2025-10-29',
-            OraRitiro: '16:00',
-            DataConsegna: '2025-10-30',
-            OraConsegna: '12:00',
-            Destinazione: 'Aeroporto Fiumicino',
-            Targa: 'IJ789LM',
-            Stato: 'Annullata'
-          },
-          {
-            ID: 'BK-004',
-            DataCreazione: '2025-11-01',
-            NomeCompleto: 'Luca Ferrari',
-            CF: 'FRRLCU90D15H501W',
-            Telefono: '333-5555555',
-            DataRitiro: '2025-11-03',
-            OraRitiro: '14:00',
-            DataConsegna: '2025-11-06',
-            OraConsegna: '18:00',
-            Destinazione: 'Firenze Centro',
-            Targa: 'AB123CD',
-            Stato: 'Da confermare'
-          }
-        ]
-      };
-      
-    case 'getAllVehicles':
-      return {
-        success: true,
-        data: [
-          { Targa: 'AB123CD', Marca: 'Ford', Modello: 'Transit', Posti: 9, Disponibile: true },
-          { Targa: 'EF456GH', Marca: 'Iveco', Modello: 'Daily', Posti: 9, Disponibile: true },
-          { Targa: 'IJ789LM', Marca: 'Mercedes', Modello: 'Sprinter', Posti: 9, Disponibile: true },
-          { Targa: 'NO012PQ', Marca: 'Fiat', Modello: 'Ducato', Posti: 9, Disponibile: false }
-        ]
-      };
-      
-    case 'updateBookingStatus':
-      console.log(`🔄 Mock status update: ${payload.id} -> ${payload.status}`);
-      showToast(`✅ Status aggiornato: ${payload.status}`, 'success');
-      return {
-        success: true,
-        message: `Status updated to ${payload.status}`
-      };
-      
-    default:
-      return { success: false, message: 'API not implemented' };
+function showLoader(show = true) {
+  const loader = document.getElementById('loading-overlay');
+  if (loader) {
+    loader.classList.toggle('hidden', !show);
   }
 }
 
-// =====================
-// UI HELPERS
-// =====================
-window.showLoader = window.showLoader || function(show = true) {
-  const loader = qsId('loading-overlay');
-  if (loader) loader.classList.toggle('hidden', !show);
-};
+function showToast(message, type = 'info', duration = 4000) {
+  return window.toastManager.show(message, type, duration);
+}
 
-window.showToast = window.showToast || function(message, type = 'info', duration = 3000) {
-  const container = qsId('toast-container') || createToastContainer();
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `${getToastIcon(type)} ${message}`;
-  container.appendChild(toast);
+// Specific toast shortcuts
+function showSuccess(message, duration) {
+  return showToast(message, 'success', duration);
+}
+
+function showError(message, duration) {
+  return showToast(message, 'error', duration);
+}
+
+function showWarning(message, duration) {
+  return showToast(message, 'warning', duration);
+}
+
+function showInfo(message, duration) {
+  return showToast(message, 'info', duration);
+}
+
+// =====================
+// FORM UTILITIES
+// =====================
+function validateForm(formElement) {
+  const inputs = formElement.querySelectorAll('input[required], select[required], textarea[required]');
+  let isValid = true;
   
-  setTimeout(() => {
-    toast.classList.add('fade-out');
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
-};
-
-function createToastContainer() {
-  const container = document.createElement('div');
-  container.id = 'toast-container';
-  container.className = 'toast-container';
-  document.body.appendChild(container);
-  return container;
-}
-
-function getToastIcon(type) {
-  const icons = { success: '✅', danger: '❌', warning: '⚠️', info: 'ℹ️' };
-  return icons[type] || 'ℹ️';
-}
-
-// =====================
-// DATE HELPERS
-// =====================
-function formattaDataIT(dateObj) {
-  if (!dateObj) return '';
-  if (typeof dateObj === 'string') {
-    const match = dateObj.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
-    return dateObj;
-  }
-  const d = new Date(dateObj);
-  return d.toLocaleDateString('it-IT');
-}
-
-function getNextValidTime() {
-  const now = new Date();
-  const validTimes = FRONTEND_CONFIG?.validation?.ORARI_VALIDI || ['08:00', '12:00', '16:00', '20:00'];
-  const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  inputs.forEach(input => {
+    if (!input.value.trim()) {
+      input.classList.add('error');
+      isValid = false;
+    } else {
+      input.classList.remove('error');
+    }
+  });
   
-  for (const time of validTimes) {
-    if (time > currentTime) return time;
-  }
-  return validTimes[0]; // Domani
+  return isValid;
 }
 
-function getTomorrowDate() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split('T')[0];
-}
-
-// =====================
-// STORAGE HELPERS
-// =====================
-function saveBookingDraft(data) {
-  const storageKey = FRONTEND_CONFIG?.storage?.BOOKING_DRAFT || 'booking_draft';
-  localStorage.setItem(storageKey, JSON.stringify(data));
-}
-
-function loadBookingDraft() {
-  const storageKey = FRONTEND_CONFIG?.storage?.BOOKING_DRAFT || 'booking_draft';
-  const draft = localStorage.getItem(storageKey);
-  return draft ? JSON.parse(draft) : null;
-}
-
-function clearBookingDraft() {
-  const storageKey = FRONTEND_CONFIG?.storage?.BOOKING_DRAFT || 'booking_draft';
-  localStorage.removeItem(storageKey);
+function clearForm(formElement) {
+  const inputs = formElement.querySelectorAll('input, select, textarea');
+  inputs.forEach(input => {
+    input.value = '';
+    input.classList.remove('error');
+  });
 }
 
 // =====================
-// ADMIN API HELPERS
+// SESSION MANAGEMENT
 // =====================
+function saveUserSession(userData) {
+  localStorage.setItem(FRONTEND_CONFIG.storage.USER_SESSION, JSON.stringify({
+    ...userData,
+    timestamp: Date.now()
+  }));
+}
 
-// Get all bookings for admin dashboard
-window.getAllBookings = async function() {
+function getUserSession() {
   try {
-    return await callAPI('getAllBookings');
-  } catch (error) {
-    console.error('Error getting all bookings:', error);
-    return { success: false, message: 'Errore caricamento prenotazioni' };
+    const session = localStorage.getItem(FRONTEND_CONFIG.storage.USER_SESSION);
+    if (!session) return null;
+    
+    const data = JSON.parse(session);
+    
+    // Check if session is still valid (24 hours)
+    const maxAge = 24 * 60 * 60 * 1000;
+    if (Date.now() - data.timestamp > maxAge) {
+      clearUserSession();
+      return null;
+    }
+    
+    return data;
+  } catch {
+    return null;
   }
+}
+
+function clearUserSession() {
+  localStorage.removeItem(FRONTEND_CONFIG.storage.USER_SESSION);
+}
+
+// =====================
+// BACKWARD COMPATIBILITY ALIASES
+// =====================
+window.validateCF = Validator.codiceFiscale;
+window.formatDate = DateUtils.format;
+window.formatDateTime = DateUtils.formatDateTime;
+window.isValidEmail = Validator.email;
+window.isValidPhone = Validator.phone;
+window.debounce = EventUtils.debounce;
+window.throttle = EventUtils.throttle;
+
+// DOM helpers
+window.qsId = (id) => document.getElementById(id);
+window.qs = (selector) => document.querySelector(selector);
+window.qsAll = (selector) => document.querySelectorAll(selector);
+
+// Show/hide helpers
+window.showElement = DOMUtils.show;
+window.hideElement = DOMUtils.hide;
+window.toggleElement = DOMUtils.toggle;
+
+// Export class utilities for advanced usage
+window.ImbrianiUtils = {
+  Validator,
+  DateUtils,
+  StringUtils,
+  DOMUtils,
+  EventUtils,
+  APIManager,
+  ToastManager
 };
 
-// Get all vehicles for admin filters
-window.getAllVehicles = async function() {
-  try {
-    return await callAPI('getAllVehicles');
-  } catch (error) {
-    console.error('Error getting vehicles:', error);
-    return { success: false, message: 'Errore caricamento veicoli' };
-  }
-};
-
-// Update booking status (for admin confirm/reject)
-window.updateBookingStatus = async function(bookingId, newStatus) {
-  try {
-    return await callAPI('updateBookingStatus', { 
-      id: bookingId, 
-      status: newStatus 
-    }, 'POST');
-  } catch (error) {
-    console.error('Error updating booking status:', error);
-    return { success: false, message: 'Errore aggiornamento stato' };
-  }
-};
-
-console.log('%c📚 shared-utils.js v2.0 + Admin APIs loaded', 'color: #28a745; font-weight: bold;');
+console.log(`%c✅ Shared Utils v8.0 loaded successfully! (${FRONTEND_CONFIG.THEME})`, 'color: #22c55e; font-weight: bold;');
