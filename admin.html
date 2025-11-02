@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🔧 Admin Dashboard Pro - Imbriani Stefano Noleggio</title>
-  <link rel="stylesheet" href="styles.css">
+  <!-- CRITICAL: Import design-system.css FIRST for theme tokens -->
+  <link rel="stylesheet" href="design-system.css">
   <link rel="stylesheet" href="admin-styles.css">
   <!-- Chart.js UMD build for browser compatibility -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -115,7 +116,7 @@
               <th>ID</th>
               <th>📅 Data Creazione</th>
               <th>👤 Cliente</th>
-              <th>📞 CF/Telefono</th>
+              <th>📱 CF/Telefono</th>
               <th>🚐 Targa</th>
               <th>📅 Ritiro</th>
               <th>📅 Consegna</th>
@@ -138,6 +139,7 @@
 
     <!-- Analytics Section -->
     <div class="analytics-section">
+      <h2>📈 Analytics</h2>
       <div class="charts-grid">
         <div class="chart-card">
           <h3>📊 Utilizzo Pulmini</h3>
