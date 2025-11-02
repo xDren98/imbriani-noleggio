@@ -1,14 +1,5 @@
-/* ================================================================================
-   IMBRIANI NOLEGGIO - MAIN SCRIPTS v8.0 (Complete & Fixed)
-   All working functionality restored with proper coordination
-   ================================================================================ */
-
+// Frontend scripts aligned with backend API actions
 'use strict';
-
-const VERSION = '8.0.0';
-const PHONE_NUMBER = '3286589618';
-const MAX_WHATSAPP_PER_WINDOW = 3;
-const RATE_LIMIT_WINDOW = 10 * 60 * 1000;
 
 let clienteCorrente = null;
 let prenotazioniUtente = [];
@@ -16,245 +7,147 @@ let availableVehicles = [];
 let stepAttuale = 1;
 let bookingData = {};
 let preventivoRequested = false;
-let whatsappTimestamps = [];
-let voiceRecognition = null;
 
-console.log(`%c🚐 Imbriani Noleggio v${VERSION} loaded`, 'font-size: 14px; font-weight: bold; color: #3f7ec7;');
-
-// =====================
-// INITIALIZATION
-// =====================
-document.addEventListener('DOMContentLoaded', () => {
-  initializeApp();
-  checkExistingSession();
-  initVoiceInput();
-  initContrastMode();
-});
-
-function initializeApp() {
-  console.log('🚀 Initializing app...');
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('✅ DOM loaded');
   
-  // Login form
-  const loginForm = document.getElementById('login-form');
+  // Login handler
+  const loginForm = qsId('login-form');
   if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
+    console.log('✅ Login handler attached');
   }
   
-  // Logout button
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
+  // Tab handlers
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+  });
   
   // New customer CTA
-  const newCustomerCTA = document.getElementById('new-customer-cta');
+  const newCustomerCTA = qsId('new-customer-cta');
   if (newCustomerCTA) {
     newCustomerCTA.addEventListener('click', handleNewCustomerCTA);
   }
   
-  // Tab navigation
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = btn.getAttribute('data-tab');
-      if (tabName) switchTab(tabName);
-    });
-  });
-  
-  // Tab switcher buttons (from empty states)
-  document.querySelectorAll('[data-tab-switch]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = btn.getAttribute('data-tab-switch');
-      if (tabName) switchTab(tabName);
-    });
-  });
+  // Logout
+  const logoutBtn = qsId('logout-btn');
+  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
   
   // Refresh bookings
-  const refreshBtn = document.getElementById('refresh-bookings');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', loadUserBookings);
-  }
+  const refreshBtn = qsId('refresh-bookings');
+  if (refreshBtn) refreshBtn.addEventListener('click', loadUserBookings);
   
-  console.log('✅ App initialized successfully');
-}
+  // Wizard navigation
+  setupWizardNavigation();
+  
+  // Preventivo buttons
+  const callBtn = qsId('call-btn');
+  const whatsappBtn = qsId('whatsapp-btn');
+  if (callBtn) callBtn.addEventListener('click', handleCallPreventivo);
+  if (whatsappBtn) whatsappBtn.addEventListener('click', handleWhatsAppPreventivo);
+});
 
-// =====================
-// VALIDATION
-// =====================
-function isValidCF(cf) {
-  if (!cf || typeof cf !== 'string') return false;
-  const cleaned = cf.toUpperCase().trim();
-  if (cleaned.length !== 16) return false;
-  return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(cleaned);
-}
-
-// =====================
-// AUTHENTICATION
-// =====================
 async function handleLogin(e) {
   e.preventDefault();
+  console.log('🚀 Login clicked');
   
-  const cfInput = document.getElementById('cf-input');
-  if (!cfInput) return;
-  
+  const cfInput = qsId('cf-input');
   const cf = cfInput.value.toUpperCase().trim();
   
   if (!isValidCF(cf)) {
-    showToast('❌ Codice fiscale non valido (16 caratteri)', 'error');
+    showToast('CF non valido (16 caratteri)', 'error');
     return;
   }
   
-  // Show loading state on button
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-  const btnText = submitBtn.querySelector('.btn-text');
-  const btnSpinner = submitBtn.querySelector('.btn-spinner');
-  
-  if (btnText) btnText.classList.add('hidden');
-  if (btnSpinner) btnSpinner.classList.remove('hidden');
-  submitBtn.disabled = true;
+  showLoader(true);
   
   try {
-    const response = await callAPI('loginWithCF', { cf });
+    const response = await callAPI('login', { cf });
+    console.log('📡 API response:', response);
     
     if (response.success) {
-      clienteCorrente = response.user;
+      clienteCorrente = response.data;
+      localStorage.setItem(FRONTEND_CONFIG.storage.CF, cf);
       
-      // Save session
-      localStorage.setItem('imbriani_user_session', JSON.stringify({
-        cf: cf,
-        name: clienteCorrente.name,
-        timestamp: Date.now()
-      }));
+      showToast('✅ Login riuscito!', 'success');
       
-      showToast(`✅ Benvenuto ${clienteCorrente.name}!`, 'success');
+      // Hide homepage, show dashboard
+      const homepage = qsId('homepage-sections');
+      const dashboard = qsId('user-dashboard');
+      if (homepage) homepage.classList.add('hidden');
+      if (dashboard) dashboard.classList.remove('hidden');
       
-      // Show dashboard
-      showUserDashboard();
+      // Update user name
+      const userName = qsId('user-name');
+      if (userName) userName.textContent = clienteCorrente.Nome || 'Cliente';
       
-      // Update user name in UI
-      const userName = document.getElementById('user-name');
-      if (userName) userName.textContent = clienteCorrente.name;
-      
-      // Load user data
+      // Load user bookings
       await loadUserBookings();
       
     } else {
-      showToast(`❌ ${response.message || 'Errore login'}`, 'error');
+      showToast(response.message || 'Errore login', 'error');
     }
-    
   } catch (error) {
-    console.error('Login error:', error);
-    showToast('❌ Errore di connessione', 'error');
+    showToast('Errore connessione', 'error');
   } finally {
-    // Reset button state
-    if (btnText) btnText.classList.remove('hidden');
-    if (btnSpinner) btnSpinner.classList.add('hidden');
-    submitBtn.disabled = false;
+    showLoader(false);
   }
 }
 
 function handleLogout() {
   clienteCorrente = null;
   prenotazioniUtente = [];
-  bookingData = {};
+  localStorage.removeItem(FRONTEND_CONFIG.storage.CF);
   
-  // Clear session
-  localStorage.removeItem('imbriani_user_session');
-  localStorage.removeItem('BOOKING_DRAFT');
-  localStorage.removeItem('PREVENTIVO_REQUESTED');
+  const homepage = qsId('homepage-sections');
+  const dashboard = qsId('user-dashboard');
+  if (homepage) homepage.classList.remove('hidden');
+  if (dashboard) dashboard.classList.add('hidden');
   
-  // Reset UI
-  showHomepage();
-  
-  // Clear form
-  const cfInput = document.getElementById('cf-input');
+  const cfInput = qsId('cf-input');
   if (cfInput) cfInput.value = '';
   
-  showToast('🔓 Disconnesso', 'info');
-}
-
-function checkExistingSession() {
-  try {
-    const session = localStorage.getItem('imbriani_user_session');
-    if (!session) return;
-    
-    const sessionData = JSON.parse(session);
-    
-    // Check if session is still valid (24 hours)
-    const maxAge = 24 * 60 * 60 * 1000;
-    if (Date.now() - sessionData.timestamp > maxAge) {
-      localStorage.removeItem('imbriani_user_session');
-      return;
-    }
-    
-    // Restore session
-    clienteCorrente = {
-      CF: sessionData.cf,
-      name: sessionData.name
-    };
-    
-    showUserDashboard();
-    
-    const userName = document.getElementById('user-name');
-    if (userName) userName.textContent = sessionData.name;
-    
-    loadUserBookings();
-    
-    console.log('🔄 Session restored for:', sessionData.name);
-    
-  } catch (error) {
-    console.error('Session restore error:', error);
-    localStorage.removeItem('imbriani_user_session');
-  }
-}
-
-// =====================
-// UI STATE MANAGEMENT
-// =====================
-function showHomepage() {
-  const homepageSections = document.getElementById('homepage-sections');
-  const dashboard = document.getElementById('user-dashboard');
-  
-  if (homepageSections) homepageSections.classList.remove('hidden');
-  if (dashboard) dashboard.classList.add('hidden');
-}
-
-function showUserDashboard() {
-  const homepageSections = document.getElementById('homepage-sections');
-  const dashboard = document.getElementById('user-dashboard');
-  
-  if (homepageSections) homepageSections.classList.add('hidden');
-  if (dashboard) dashboard.classList.remove('hidden');
+  showToast('🚪 Disconnesso', 'info');
 }
 
 function handleNewCustomerCTA() {
-  // Show dashboard and switch to new booking tab
-  showUserDashboard();
-  switchTab('nuovo');
-  
-  // Initialize booking wizard with tomorrow's dates
+  // Pre-fill tomorrow dates
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
   const dayAfter = new Date(tomorrow);
   dayAfter.setDate(dayAfter.getDate() + 1);
+  const dayAfterStr = dayAfter.toISOString().split('T')[0];
   
-  bookingData = {
-    dataRitiro: tomorrow.toISOString().split('T')[0],
-    oraRitiro: '08:00',
-    dataConsegna: dayAfter.toISOString().split('T')[0],
-    oraConsegna: '20:00'
-  };
+  // Show dashboard without login
+  const homepage = qsId('homepage-sections');
+  const dashboard = qsId('user-dashboard');
+  if (homepage) homepage.classList.add('hidden');
+  if (dashboard) dashboard.classList.remove('hidden');
   
-  showToast('📅 Date preimpostate per domani!', 'info');
+  // Switch to new booking tab
+  switchTab('nuovo');
+  
+  // Pre-fill dates
+  setTimeout(() => {
+    const dataRitiro = qsId('data-ritiro');
+    const dataConsegna = qsId('data-consegna');
+    const oraRitiro = qsId('ora-ritiro');
+    const oraConsegna = qsId('ora-consegna');
+    
+    if (dataRitiro) dataRitiro.value = tomorrowStr;
+    if (dataConsegna) dataConsegna.value = dayAfterStr;
+    if (oraRitiro) oraRitiro.value = '08:00';
+    if (oraConsegna) oraConsegna.value = '20:00';
+  }, 100);
+  
+  showToast('🚀 Date preimpostate per domani!', 'info');
 }
 
-// =====================
-// TAB MANAGEMENT
-// =====================
 function switchTab(tabName) {
-  console.log(`📋 Switching to tab: ${tabName}`);
-  
   // Update tab buttons
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+  document.querySelectorAll('.tab-button').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
   });
   
@@ -263,626 +156,338 @@ function switchTab(tabName) {
     content.classList.toggle('active', content.id === `${tabName}-tab`);
   });
   
-  // Tab-specific initialization
+  // Load data based on tab
   if (tabName === 'prenotazioni') {
-    if (clienteCorrente) {
-      loadUserBookings();
-    }
+    loadUserBookings();
   } else if (tabName === 'nuovo') {
-    initializeNewBookingTab();
-  } else if (tabName === 'profilo') {
-    if (clienteCorrente) {
-      loadUserProfile();
-    }
+    loadAvailableVehicles();
+    goToStep(1);
   }
 }
 
-// =====================
-// NEW BOOKING TAB
-// =====================
-function initializeNewBookingTab() {
-  const wizardContainer = document.querySelector('.booking-wizard');
-  if (!wizardContainer) return;
-  
-  wizardContainer.innerHTML = `
-    <div class="card">
-      <div class="card-header">
-        <h3>🎯 Nuova Prenotazione</h3>
-        <p>Compila i dati per richiedere un preventivo</p>
-      </div>
-      <div class="card-body">
-        <form id="booking-form" class="booking-form">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="new-data-ritiro">📅 Data Ritiro</label>
-              <input type="date" id="new-data-ritiro" class="form-input" required>
-            </div>
-            <div class="form-group">
-              <label for="new-ora-ritiro">⏰ Ora Ritiro</label>
-              <select id="new-ora-ritiro" class="form-input" required>
-                <option value="">Seleziona...</option>
-                ${generateTimeOptions()}
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="new-data-consegna">📅 Data Consegna</label>
-              <input type="date" id="new-data-consegna" class="form-input" required>
-            </div>
-            <div class="form-group">
-              <label for="new-ora-consegna">⏰ Ora Consegna</label>
-              <select id="new-ora-consegna" class="form-input" required>
-                <option value="">Seleziona...</option>
-                ${generateTimeOptions()}
-              </select>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="new-destinazione">🎯 Destinazione</label>
-            <div class="input-with-button">
-              <input type="text" id="new-destinazione" class="form-input" 
-                     placeholder="Dove vuoi andare?" required>
-              <button type="button" id="voice-btn" class="btn btn-outline voice-btn" title="Registrazione vocale">
-                🎤
-              </button>
-            </div>
-            <small class="input-hint">Indica la destinazione principale del viaggio</small>
-          </div>
-          
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-large">
-              🔍 Verifica Disponibilità
-            </button>
-          </div>
-        </form>
-        
-        <!-- Available vehicles will be shown here -->
-        <div id="vehicles-section" class="vehicles-section hidden">
-          <h4>🚐 Pulmini Disponibili</h4>
-          <div id="vehicles-grid" class="vehicles-grid"></div>
-        </div>
-        
-        <!-- Booking summary and contact -->
-        <div id="booking-summary-section" class="booking-summary-section hidden">
-          <div class="summary-card">
-            <h4>📋 Riepilogo Prenotazione</h4>
-            <div id="booking-summary-content"></div>
-          </div>
-          
-          <div class="contact-options">
-            <h5>📞 Richiedi Preventivo</h5>
-            <div class="contact-grid">
-              <button id="call-preventivo" class="btn btn-success btn-large">
-                📞 Chiama Ora
-              </button>
-              <button id="whatsapp-preventivo" class="btn btn-primary btn-large">
-                📱 WhatsApp
-              </button>
-            </div>
-            <div id="preventivo-status" class="success-message hidden">
-              ✅ <strong>Preventivo richiesto!</strong> Riceverai risposta entro 2 ore.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  // Pre-fill dates if available
-  if (bookingData.dataRitiro) {
-    document.getElementById('new-data-ritiro').value = bookingData.dataRitiro;
-    document.getElementById('new-ora-ritiro').value = bookingData.oraRitiro || '';
-    document.getElementById('new-data-consegna').value = bookingData.dataConsegna;
-    document.getElementById('new-ora-consegna').value = bookingData.oraConsegna || '';
-  }
-  
-  // Setup form handler
-  const bookingForm = document.getElementById('booking-form');
-  if (bookingForm) {
-    bookingForm.addEventListener('submit', handleBookingFormSubmit);
-  }
-  
-  // Setup voice input
-  const voiceBtn = document.getElementById('voice-btn');
-  if (voiceBtn) {
-    voiceBtn.addEventListener('click', handleVoiceInput);
-  }
-}
-
-function generateTimeOptions() {
-  const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
-                 '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
-  return times.map(time => `<option value="${time}">${time}</option>`).join('');
-}
-
-async function handleBookingFormSubmit(e) {
-  e.preventDefault();
-  
-  const formData = {
-    dataRitiro: document.getElementById('new-data-ritiro').value,
-    oraRitiro: document.getElementById('new-ora-ritiro').value,
-    dataConsegna: document.getElementById('new-data-consegna').value,
-    oraConsegna: document.getElementById('new-ora-consegna').value,
-    destinazione: document.getElementById('new-destinazione').value.trim()
-  };
-  
-  // Validation
-  if (!formData.dataRitiro || !formData.oraRitiro || !formData.dataConsegna || 
-      !formData.oraConsegna || !formData.destinazione) {
-    showToast('❌ Compila tutti i campi', 'error');
-    return;
-  }
-  
-  const startDateTime = new Date(`${formData.dataRitiro}T${formData.oraRitiro}:00`);
-  const endDateTime = new Date(`${formData.dataConsegna}T${formData.oraConsegna}:00`);
-  
-  if (startDateTime >= endDateTime) {
-    showToast('❌ Data/ora consegna deve essere dopo il ritiro', 'error');
-    return;
-  }
-  
-  if (startDateTime < new Date()) {
-    showToast('❌ La data di ritiro deve essere futura', 'error');
-    return;
-  }
-  
-  // Save data
-  bookingData = formData;
-  localStorage.setItem('BOOKING_DRAFT', JSON.stringify(bookingData));
-  
-  // Load available vehicles
-  await loadAvailableVehicles();
-}
-
-// =====================
-// VEHICLE MANAGEMENT
-// =====================
-async function loadAvailableVehicles() {
-  const vehiclesSection = document.getElementById('vehicles-section');
-  const vehiclesGrid = document.getElementById('vehicles-grid');
-  
-  if (!vehiclesSection || !vehiclesGrid) return;
-  
-  vehiclesSection.classList.remove('hidden');
-  vehiclesGrid.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Caricamento veicoli...</p></div>';
-  
-  try {
-    const response = await callAPI('getAvailableVehicles', {
-      dataInizio: bookingData.dataRitiro,
-      dataFine: bookingData.dataConsegna
-    });
-    
-    if (response.success && response.data && response.data.length > 0) {
-      availableVehicles = response.data;
-      renderVehicles();
-    } else {
-      vehiclesGrid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">🚐</div>
-          <h4>Nessun pulmino disponibile</h4>
-          <p>Per le date selezionate non ci sono veicoli disponibili</p>
-        </div>
-      `;
-    }
-  } catch (error) {
-    console.error('Error loading vehicles:', error);
-    vehiclesGrid.innerHTML = `
-      <div class="error-state">
-        <div class="error-icon">❌</div>
-        <h4>Errore di connessione</h4>
-        <p>Impossibile caricare i veicoli disponibili</p>
-        <button class="btn btn-primary" onclick="loadAvailableVehicles()">🔄 Riprova</button>
-      </div>
-    `;
-  }
-}
-
-function renderVehicles() {
-  const vehiclesGrid = document.getElementById('vehicles-grid');
-  if (!vehiclesGrid) return;
-  
-  vehiclesGrid.innerHTML = availableVehicles.map(vehicle => `
-    <div class="vehicle-card ${bookingData.selectedVehicle?.Targa === vehicle.Targa ? 'selected' : ''}" 
-         onclick="selectVehicle('${vehicle.Targa}')">
-      <div class="vehicle-header">
-        <h5>🚐 ${vehicle.Targa}</h5>
-        <span class="badge badge-success">✅ Disponibile</span>
-      </div>
-      <div class="vehicle-info">
-        <p><strong>${vehicle.Marca} ${vehicle.Modello}</strong></p>
-        <p>👥 ${vehicle.Posti || 9} posti</p>
-        <p>🎨 ${vehicle.Colore || 'Standard'}</p>
-      </div>
-    </div>
-  `).join('');
-}
-
-function selectVehicle(targa) {
-  const vehicle = availableVehicles.find(v => v.Targa === targa);
-  if (!vehicle) return;
-  
-  bookingData.selectedVehicle = vehicle;
-  bookingData.targa = targa;
-  
-  // Update UI
-  document.querySelectorAll('.vehicle-card').forEach(card => {
-    card.classList.remove('selected');
-  });
-  
-  event.target.closest('.vehicle-card').classList.add('selected');
-  
-  showToast(`✅ Selezionato: ${targa}`, 'success');
-  
-  // Show booking summary
-  showBookingSummary();
-  
-  localStorage.setItem('BOOKING_DRAFT', JSON.stringify(bookingData));
-}
-
-// =====================
-// BOOKING SUMMARY & PREVENTIVO
-// =====================
-function showBookingSummary() {
-  const summarySection = document.getElementById('booking-summary-section');
-  const summaryContent = document.getElementById('booking-summary-content');
-  
-  if (!summarySection || !summaryContent) return;
-  
-  summarySection.classList.remove('hidden');
-  
-  const startDate = new Date(`${bookingData.dataRitiro}T${bookingData.oraRitiro}:00`);
-  const endDate = new Date(`${bookingData.dataConsegna}T${bookingData.oraConsegna}:00`);
-  const diffMs = endDate - startDate;
-  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-  const days = Math.floor(diffHours / 24);
-  const hours = diffHours % 24;
-  
-  let durationText = '';
-  if (days > 0 && hours > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}, ${hours} ore`;
-  else if (days > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}`;
-  else durationText = `${hours} ore`;
-  
-  summaryContent.innerHTML = `
-    <div class="summary-grid">
-      <div class="summary-item">
-        <span class="summary-label">📅 Ritiro:</span>
-        <span class="summary-value">${formatDate(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">📅 Consegna:</span>
-        <span class="summary-value">${formatDate(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">⏱️ Durata:</span>
-        <span class="summary-value">${durationText}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">🎯 Destinazione:</span>
-        <span class="summary-value">${bookingData.destinazione}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">🚐 Pulmino:</span>
-        <span class="summary-value">${bookingData.targa} (${bookingData.selectedVehicle?.Posti || 9} posti)</span>
-      </div>
-    </div>
-  `;
-  
-  // Setup contact buttons
-  const callBtn = document.getElementById('call-preventivo');
-  const whatsappBtn = document.getElementById('whatsapp-preventivo');
-  
-  if (callBtn) callBtn.addEventListener('click', handleCallPreventivo);
-  if (whatsappBtn) whatsappBtn.addEventListener('click', handleWhatsAppPreventivo);
-}
-
-function buildPreventivoMessage() {
-  const { dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione, targa, selectedVehicle } = bookingData;
-  
-  const startDate = new Date(`${dataRitiro}T${oraRitiro}:00`);
-  const endDate = new Date(`${dataConsegna}T${oraConsegna}:00`);
-  const diffMs = endDate - startDate;
-  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-  const days = Math.floor(diffHours / 24);
-  const hours = diffHours % 24;
-  
-  let durationText = '';
-  if (days > 0 && hours > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}, ${hours} ore`;
-  else if (days > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}`;
-  else durationText = `${hours} ore`;
-  
-  const posti = selectedVehicle?.Posti || '9';
-  
-  // ASCII-only message for WhatsApp compatibility
-  return `PREVENTIVO PULMINO IMBRIANI\n===========================\nDal: ${formatDate(dataRitiro)} alle ${oraRitiro}\nAl: ${formatDate(dataConsegna)} alle ${oraConsegna}\nDestinazione: ${destinazione}\nPulmino: ${targa} (${posti} posti)\nDurata: ${durationText}\n===========================\nContatto: ${PHONE_NUMBER}\nGrazie!`;
-}
-
-function handleCallPreventivo() {
-  const now = new Date();
-  const hour = now.getHours();
-  
-  if (hour < 8 || hour > 21) {
-    showToast('⚠️ Orario di contatto: 8:00 - 21:00', 'warning');
-  }
-  
-  window.open(`tel:+39${PHONE_NUMBER}`);
-  markPreventivoRequested();
-  showToast('📞 Apertura dialer...', 'info');
-}
-
-function handleWhatsAppPreventivo() {
-  if (!checkRateLimit()) {
-    const remaining = getRateLimitTimeRemaining();
-    showToast(`⚠️ Limite WhatsApp raggiunto. Riprova tra ${remaining} minuti`, 'warning');
-    return;
-  }
-  
-  const message = buildPreventivoMessage();
-  const encodedMessage = encodeURIComponent(message);
-  const whatsappURL = `https://wa.me/39${PHONE_NUMBER}?text=${encodedMessage}`;
-  
-  whatsappTimestamps.push(Date.now());
-  
-  window.open(whatsappURL, '_blank');
-  markPreventivoRequested();
-  showToast('📱 WhatsApp aperto!', 'success');
-}
-
-function markPreventivoRequested() {
-  preventivoRequested = true;
-  localStorage.setItem('PREVENTIVO_REQUESTED', '1');
-  
-  const statusDiv = document.getElementById('preventivo-status');
-  if (statusDiv) {
-    statusDiv.classList.remove('hidden');
-  }
-}
-
-function checkRateLimit() {
-  const now = Date.now();
-  whatsappTimestamps = whatsappTimestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
-  return whatsappTimestamps.length < MAX_WHATSAPP_PER_WINDOW;
-}
-
-function getRateLimitTimeRemaining() {
-  if (whatsappTimestamps.length === 0) return 0;
-  const oldestTimestamp = Math.min(...whatsappTimestamps);
-  const timeRemaining = RATE_LIMIT_WINDOW - (Date.now() - oldestTimestamp);
-  return Math.max(0, Math.ceil(timeRemaining / 1000 / 60));
-}
-
-// =====================
-// USER BOOKINGS
-// =====================
 async function loadUserBookings() {
-  const bookingsList = document.getElementById('prenotazioni-list');
-  const emptyState = document.getElementById('empty-bookings');
+  const bookingsList = qsId('prenotazioni-list');
+  const emptyState = qsId('empty-bookings');
   
   if (!bookingsList) return;
   
-  bookingsList.innerHTML = `
-    <div class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>Caricamento prenotazioni...</p>
-    </div>
-  `;
+  if (!clienteCorrente?.CF) {
+    if (emptyState) emptyState.classList.remove('hidden');
+    bookingsList.innerHTML = '';
+    return;
+  }
   
   try {
-    let response;
-    
-    if (clienteCorrente && clienteCorrente.CF) {
-      response = await callAPI('getUserBookings', { cf: clienteCorrente.CF });
-    } else {
-      // Demo data for anonymous users
-      response = {
-        success: true,
-        data: []
-      };
-    }
+    const response = await callAPI('recuperaPrenotazioni', { cf: clienteCorrente.CF });
     
     if (response.success) {
       prenotazioniUtente = response.data || [];
       
       if (prenotazioniUtente.length === 0) {
-        bookingsList.classList.add('hidden');
+        bookingsList.innerHTML = '';
         if (emptyState) emptyState.classList.remove('hidden');
       } else {
-        bookingsList.classList.remove('hidden');
         if (emptyState) emptyState.classList.add('hidden');
         renderUserBookings();
       }
     } else {
       showToast('❌ Errore caricamento prenotazioni', 'error');
     }
-    
   } catch (error) {
     console.error('Error loading bookings:', error);
-    bookingsList.innerHTML = `
-      <div class="error-state">
-        <div class="error-icon">❌</div>
-        <h4>Errore di connessione</h4>
-        <p>Impossibile caricare le prenotazioni</p>
-        <button class="btn btn-primary" onclick="loadUserBookings()">🔄 Riprova</button>
-      </div>
-    `;
+    showToast('❌ Errore connessione prenotazioni', 'error');
   }
 }
 
 function renderUserBookings() {
-  const bookingsList = document.getElementById('prenotazioni-list');
+  const bookingsList = qsId('prenotazioni-list');
   if (!bookingsList) return;
   
-  bookingsList.innerHTML = prenotazioniUtente.map(booking => {
-    const statusClass = getStatusBadgeClass(booking.Stato);
-    
-    return `
-      <div class="booking-card">
-        <div class="booking-header">
-          <h4>${booking.ID}</h4>
-          <span class="status-badge ${statusClass}">${booking.Stato}</span>
-        </div>
-        <div class="booking-details">
-          <div class="detail-row">
-            <span class="detail-label">📅 Periodo:</span>
-            <span class="detail-value">
-              ${formatDate(booking.DataRitiro)} ${booking.OraRitiro} → 
-              ${formatDate(booking.DataConsegna)} ${booking.OraConsegna}
-            </span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">🎯 Destinazione:</span>
-            <span class="detail-value">${booking.Destinazione}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">🚐 Pulmino:</span>
-            <span class="detail-value">${booking.Targa || 'Da assegnare'}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">📅 Creata il:</span>
-            <span class="detail-value">${formatDate(booking.DataCreazione)}</span>
-          </div>
-        </div>
+  bookingsList.innerHTML = prenotazioniUtente.map(booking => `
+    <div class="booking-card">
+      <div class="booking-header">
+        <h5>📋 #${booking.ID}</h5>
+        <span class="badge ${getStatusClass(booking.Stato)}">${getStatusEmoji(booking.Stato)} ${booking.Stato}</span>
       </div>
-    `;
-  }).join('');
+      <div class="booking-details">
+        <p><strong>📅 Periodo:</strong> ${formattaDataIT(booking.DataRitiro)} ${booking.OraRitiro} → ${formattaDataIT(booking.DataConsegna)} ${booking.OraConsegna}</p>
+        <p><strong>🎯 Destinazione:</strong> ${booking.Destinazione}</p>
+        <p><strong>🚐 Pulmino:</strong> ${booking.Targa || 'Da assegnare'}</p>
+        <p><strong>📅 Creata:</strong> ${formattaDataIT(booking.DataCreazione)}</p>
+      </div>
+    </div>
+  `).join('');
 }
 
-function getStatusBadgeClass(status) {
-  const statusMap = {
-    'Confermata': 'status-confirmed',
-    'Da confermare': 'status-pending',
-    'Annullata': 'status-cancelled'
-  };
-  return statusMap[status] || 'status-pending';
-}
-
-// =====================
-// USER PROFILE
-// =====================
-function loadUserProfile() {
-  const profileForm = document.getElementById('profile-form');
-  if (!profileForm || !clienteCorrente) return;
+async function loadAvailableVehicles() {
+  const vehiclesList = qsId('veicoli-list');
+  if (!vehiclesList) return;
   
-  profileForm.innerHTML = `
-    <div class="form-grid">
-      <div class="form-group">
-        <label>👤 Nome</label>
-        <input type="text" class="form-input" value="${clienteCorrente.name || 'Cliente Demo'}" readonly>
-      </div>
-      <div class="form-group">
-        <label>🆔 Codice Fiscale</label>
-        <input type="text" class="form-input" value="${clienteCorrente.CF || ''}" readonly>
-      </div>
-    </div>
+  try {
+    const response = await callAPI('disponibilita');
     
-    <div class="profile-stats">
-      <h5>📊 Statistiche</h5>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <span class="stat-value">${prenotazioniUtente.length}</span>
-          <span class="stat-label">Prenotazioni Totali</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">${prenotazioniUtente.filter(b => b.Stato === 'Confermata').length}</span>
-          <span class="stat-label">Confermate</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">${prenotazioniUtente.filter(b => b.Stato === 'Da confermare').length}</span>
-          <span class="stat-label">In Attesa</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="info-note">
-      <div class="note-icon">ℹ️</div>
-      <p>Per modificare i dati personali, contatta l'assistenza al <strong>${PHONE_NUMBER}</strong></p>
-    </div>
-  `;
+    if (response.success) {
+      availableVehicles = response.data || [];
+      renderVehicles();
+    } else {
+      showToast('❌ Errore caricamento veicoli', 'error');
+    }
+  } catch (error) {
+    console.error('Error loading vehicles:', error);
+    showToast('❌ Errore connessione veicoli', 'error');
+  }
 }
 
-// =====================
-// VOICE INPUT
-// =====================
-function initVoiceInput() {
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    console.log('⚠️ Voice recognition not supported');
+function renderVehicles() {
+  const vehiclesList = qsId('veicoli-list');
+  if (!vehiclesList) return;
+  
+  if (!availableVehicles.length) {
+    vehiclesList.innerHTML = '<p>📭 Nessun pulmino disponibile</p>';
     return;
   }
   
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  voiceRecognition = new SpeechRecognition();
-  voiceRecognition.lang = 'it-IT';
-  voiceRecognition.continuous = false;
-  voiceRecognition.interimResults = false;
-  
-  voiceRecognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    const destinazioneInput = document.getElementById('new-destinazione');
-    if (destinazioneInput) {
-      destinazioneInput.value = transcript;
-      showToast(`🎤 Registrato: ${transcript}`, 'success');
-    }
-  };
-  
-  voiceRecognition.onerror = () => {
-    showToast('❌ Errore registrazione vocale', 'error');
-  };
+  vehiclesList.innerHTML = availableVehicles.map(vehicle => `
+    <div class="vehicle-card" onclick="selectVehicle('${vehicle.Targa}', this)">
+      <div class="vehicle-header">
+        <strong>🚐 ${vehicle.Targa}</strong>
+        <span class="badge badge-success">👥 ${vehicle.Posti} posti</span>
+      </div>
+      <div class="vehicle-details">
+        <div class="vehicle-model">${vehicle.Marca} ${vehicle.Modello}</div>
+        <div class="vehicle-status">✅ Disponibile</div>
+      </div>
+    </div>
+  `).join('');
 }
 
-function handleVoiceInput() {
-  if (voiceRecognition) {
-    const voiceBtn = document.getElementById('voice-btn');
-    voiceBtn.classList.add('recording');
-    showToast('🎤 Parla ora...', 'info', 3000);
-    voiceRecognition.start();
-    
-    setTimeout(() => {
-      voiceBtn.classList.remove('recording');
-    }, 5000);
-  }
+function selectVehicle(targa, element) {
+  document.querySelectorAll('.vehicle-card').forEach(card => {
+    card.classList.remove('active');
+  });
+  
+  element.classList.add('active');
+  
+  bookingData.selectedVehicle = availableVehicles.find(v => v.Targa === targa);
+  bookingData.targa = targa;
+  
+  const nextBtn = qsId('step2-next');
+  if (nextBtn) nextBtn.disabled = false;
+  
+  showToast('✅ Pulmino selezionato: ' + targa, 'success');
 }
 
-// =====================
-// CONTRAST MODE
-// =====================
-function initContrastMode() {
-  const contrastToggle = document.getElementById('contrast-toggle');
-  if (!contrastToggle) return;
-  
-  const contrastEnabled = localStorage.getItem('contrast-mode') === '1';
-  if (contrastEnabled) {
-    document.body.classList.add('high-contrast');
-  }
-  
-  contrastToggle.addEventListener('click', () => {
-    const isEnabled = document.body.classList.toggle('high-contrast');
-    localStorage.setItem('contrast-mode', isEnabled ? '1' : '0');
-    showToast(isEnabled ? '👁 Contrasto elevato attivo' : '👁 Contrasto normale', 'info');
+function setupWizardNavigation() {
+  const nav = {
+    'step1-next': () => validateAndGoToStep(2),
+    'step2-back': () => goToStep(1),
+    'step2-next': () => validateAndGoToStep(3),
+    'step3-back': () => goToStep(2),
+    'step3-next': () => validateAndGoToStep(4),
+    'step4-back': () => goToStep(3),
+    'step4-next': () => validateAndGoToStep(5),
+    'step5-back': () => goToStep(4),
+    'step5-confirm': () => submitBooking(),
+    'add-autista': () => addDriver()
+  };
+
+  Object.entries(nav).forEach(([id, handler]) => {
+    const btn = qsId(id);
+    if (btn) btn.addEventListener('click', handler);
   });
 }
 
-// =====================
-// UTILITIES
-// =====================
-function formatDate(dateStr) {
-  if (!dateStr) return '-';
+function goToStep(step) {
+  stepAttuale = step;
+  
+  for (let i = 1; i <= 5; i++) {
+    const stepEl = qsId(`step-${i}`);
+    if (stepEl) stepEl.classList.toggle('active', i === step);
+  }
+  
+  document.querySelectorAll('.progress-step').forEach((el, idx) => {
+    el.classList.toggle('active', idx + 1 === step);
+    el.classList.toggle('completed', idx + 1 < step);
+  });
+  
+  if (step === 2) loadAvailableVehicles();
+  if (step === 3) updatePreventivoSummary();
+}
+
+function validateAndGoToStep(targetStep) {
+  if (stepAttuale === 1) {
+    const dataRitiro = qsId('data-ritiro')?.value;
+    const oraRitiro = qsId('ora-ritiro')?.value;
+    const dataConsegna = qsId('data-consegna')?.value;
+    const oraConsegna = qsId('ora-consegna')?.value;
+    const destinazione = qsId('destinazione')?.value?.trim();
+    
+    if (!dataRitiro || !oraRitiro || !dataConsegna || !oraConsegna || !destinazione) {
+      showToast('⚠️ Compila tutti i campi', 'warning');
+      return;
+    }
+    
+    bookingData = {
+      dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione
+    };
+  }
+  
+  if (stepAttuale === 2 && !bookingData.targa) {
+    showToast('⚠️ Seleziona un pulmino', 'warning');
+    return;
+  }
+  
+  if (stepAttuale === 3 && !preventivoRequested) {
+    showToast('⚠️ Richiedi il preventivo prima di continuare', 'warning');
+    return;
+  }
+  
+  goToStep(targetStep);
+}
+
+function updatePreventivoSummary() {
+  const container = qsId('preventivo-details');
+  if (!container || !bookingData.targa) return;
+  
+  container.innerHTML = `
+    <div class="summary-row"><span>🚐 Pulmino:</span> <strong>${bookingData.targa}</strong></div>
+    <div class="summary-row"><span>📅 Ritiro:</span> <strong>${formattaDataIT(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</strong></div>
+    <div class="summary-row"><span>📅 Consegna:</span> <strong>${formattaDataIT(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</strong></div>
+    <div class="summary-row"><span>🎯 Destinazione:</span> <strong>${bookingData.destinazione}</strong></div>
+  `;
+}
+
+function handleCallPreventivo() {
+  window.open('tel:3286589618');
+  markPreventivoRequested();
+}
+
+function handleWhatsAppPreventivo() {
+  const message = `PREVENTIVO PULMINO IMBRIANI\n${bookingData.targa}\nDal: ${formattaDataIT(bookingData.dataRitiro)} ${bookingData.oraRitiro}\nAl: ${formattaDataIT(bookingData.dataConsegna)} ${bookingData.oraConsegna}\nDestinazione: ${bookingData.destinazione}`;
+  const url = `https://wa.me/393286589618?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+  markPreventivoRequested();
+}
+
+function markPreventivoRequested() {
+  preventivoRequested = true;
+  const statusDiv = qsId('preventivo-completed');
+  if (statusDiv) statusDiv.classList.remove('hidden');
+  
+  const nextBtn = qsId('step3-next');
+  if (nextBtn) nextBtn.disabled = false;
+  
+  showToast('✅ Preventivo richiesto! Ora puoi continuare', 'success');
+}
+
+function addDriver() {
+  if (!bookingData.drivers) bookingData.drivers = [];
+  
+  if (bookingData.drivers.length >= 3) {
+    showToast('⚠️ Massimo 3 autisti', 'warning');
+    return;
+  }
+  
+  const newDriver = {
+    Nome: clienteCorrente?.Nome || '',
+    CF: clienteCorrente?.CF || '',
+    Email: clienteCorrente?.Email || '',
+    Cellulare: clienteCorrente?.Cellulare || ''
+  };
+  
+  bookingData.drivers.push(newDriver);
+  renderDrivers();
+}
+
+function renderDrivers() {
+  const container = qsId('autisti-container');
+  if (!container || !bookingData.drivers) return;
+  
+  container.innerHTML = bookingData.drivers.map((driver, index) => `
+    <div class="driver-row">
+      <div class="driver-header">
+        <h6>👤 Autista ${index + 1}</h6>
+        ${index > 0 ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDriver(${index})">❌ Rimuovi</button>` : ''}
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome:</label>
+          <input type="text" class="form-control driver-nome" value="${driver.Nome}" data-index="${index}">
+        </div>
+        <div class="form-group">
+          <label>CF:</label>
+          <input type="text" class="form-control driver-cf" value="${driver.CF}" data-index="${index}" maxlength="16">
+        </div>
+      </div>
+    </div>
+  `).join('');
+  
+  // Enable next button if drivers exist
+  const nextBtn = qsId('step4-next');
+  if (nextBtn) nextBtn.disabled = bookingData.drivers.length === 0;
+}
+
+async function submitBooking() {
+  if (!bookingData.targa || !clienteCorrente?.CF) {
+    showToast('❌ Dati mancanti per prenotazione', 'error');
+    return;
+  }
+  
+  showLoader(true);
   
   try {
-    return new Date(dateStr).toLocaleDateString('it-IT');
-  } catch {
-    return dateStr;
+    const payload = {
+      cf: clienteCorrente.CF,
+      dataRitiro: bookingData.dataRitiro,
+      oraRitiro: bookingData.oraRitiro,
+      dataConsegna: bookingData.dataConsegna,
+      oraConsegna: bookingData.oraConsegna,
+      destinazione: bookingData.destinazione,
+      targa: bookingData.targa,
+      drivers: encodeURIComponent(JSON.stringify(bookingData.drivers || [{
+        Nome: clienteCorrente.Nome || '',
+        CF: clienteCorrente.CF,
+        Email: clienteCorrente.Email || '',
+        Cellulare: clienteCorrente.Cellulare || ''
+      }]))
+    };
+    
+    const response = await callAPI('creaPrenotazione', payload);
+    
+    if (response.success) {
+      showToast('🎉 Prenotazione creata con ID: ' + response.data.id, 'success');
+      switchTab('prenotazioni');
+      loadUserBookings();
+      bookingData = {};
+      preventivoRequested = false;
+    } else {
+      showToast('❌ ' + response.message, 'error');
+    }
+  } catch (error) {
+    showToast('❌ Errore creazione prenotazione', 'error');
+  } finally {
+    showLoader(false);
   }
 }
 
-function showLoader(show = true) {
-  const loader = document.getElementById('loading-overlay');
-  if (loader) {
-    loader.classList.toggle('hidden', !show);
-  }
+function getStatusClass(status) {
+  if (status === 'Confermata') return 'badge-success';
+  if (status === 'Da confermare') return 'badge-warning';
+  if (status === 'Annullata') return 'badge-danger';
+  return 'badge-secondary';
 }
 
-// Global function exports
+function getStatusEmoji(status) {
+  return FRONTEND_CONFIG.statiEmoji[status] || '❓';
+}
+
+// Make functions global
 window.selectVehicle = selectVehicle;
-window.loadUserBookings = loadUserBookings;
-window.loadAvailableVehicles = loadAvailableVehicles;
+window.removeDriver = function(index) {
+  if (bookingData.drivers) {
+    bookingData.drivers.splice(index, 1);
+    renderDrivers();
+  }
+};
 
-console.log('%c✅ Scripts v8.0 loaded successfully!', 'color: #22c55e; font-weight: bold;');
+console.log('✅ scripts.js loaded - Backend aligned');
