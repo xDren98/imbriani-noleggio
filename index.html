@@ -4,434 +4,248 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Imbriani Stefano Noleggio - Prenota il tuo Pulmino</title>
+  <link rel="stylesheet" href="design-system.css">
   <link rel="stylesheet" href="styles.css">
-  <meta name="description" content="Prenota pulmini con Imbriani Stefano Noleggio. Facile, veloce e sicuro!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <meta name="description" content="Noleggio pulmini 9 posti con Imbriani Stefano. Prenotazione online facile e veloce.">
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOCIgZmlsbD0iIzNmN2VjNyIvPgo8cGF0aCBkPSJNMTIgOEgxMFYyNEgxMlY4WiIgZmlsbD0iI2ZmZmZmZiIvPgo8cGF0aCBkPSJNMTQgOEgyMlYxMEgxNFY4WiIgZmlsbD0iI2ZmZmZmZiIvPgo8cGF0aCBkPSJNMTQgMTJIMjBWMTRIMTRWMTJaIiBmaWxsPSIjZmZmZmZmIi8+CjxwYXRoIGQ9Ik0xNCAxNkgyMlYxOEgxNFYxNloiIGZpbGw9IiNmZmZmZmYiLz4KPHBhdGggZD0iTTE0IDIwSDIwVjIySDE0VjIwWiIgZmlsbD0iI2ZmZmZmZiIvPgo8L3N2Zz4K">
 </head>
 <body>
-  <!-- CONTRAST MODE TOGGLE -->
-  <button id="contrast-toggle" class="contrast-toggle" aria-label="Attiva modalita contrasto elevato">
-    [*]
-  </button>
-
   <!-- LOADING OVERLAY -->
   <div id="loading-overlay" class="loading-overlay hidden">
-    <div class="spinner"></div>
-    <p>Caricamento...</p>
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Caricamento...</p>
+    </div>
   </div>
 
-  <!-- CONTAINER PRINCIPALE -->
-  <div class="container">
-    <!-- HEADER -->
-    <header class="header">
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container">
       <div class="header-content">
-        <h1 class="logo">[VAN] Imbriani Stefano Noleggio</h1>
+        <div class="logo-brand">
+          <h1 class="wordmark">
+            <span class="brand-icon">🚐</span>
+            <span class="brand-name">Imbriani</span>
+            <span class="brand-sub">Noleggio</span>
+          </h1>
+        </div>
+        <nav class="header-nav">
+          <a href="admin.html" class="nav-link admin-link">
+            <span>🔧</span> Admin
+          </a>
+          <button id="contrast-toggle" class="btn-ghost" aria-label="Toggle contrast">
+            <span>👁</span>
+          </button>
+        </nav>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <div class="container">
       
-      <!-- HOMEPAGE DUAL SECTIONS (always visible) -->
-      <div id="homepage-sections" class="homepage-sections">
+      <!-- HERO SECTION -->
+      <section class="hero-section" id="homepage-sections">
+        <div class="hero-content">
+          <h2 class="hero-title">Noleggio Pulmini <span class="accent">9 Posti</span></h2>
+          <p class="hero-subtitle">Servizio professionale per trasporti, gite e viaggi di gruppo</p>
+        </div>
         
-        <!-- GIA CLIENTE SECTION -->
-        <div class="customer-section existing-customer">
-          <div class="section-icon">[USER]</div>
-          <h2>Sei gia nostro cliente?</h2>
-          <p>Accedi con il tuo codice fiscale per gestire le prenotazioni</p>
-          
-          <form id="login-form" class="form">
-            <div class="form-group">
-              <label for="cf-input">[ID] Codice Fiscale:</label>
-              <input 
-                type="text" 
-                id="cf-input" 
-                placeholder="Inserisci il tuo Codice Fiscale"
-                maxlength="16"
-                required
-                autocomplete="off"
-              >
-              <div class="input-hint">Il tuo codice fiscale (16 caratteri)</div>
+        <div class="services-grid">
+          <!-- USER SECTION -->
+          <div class="service-card existing-customer">
+            <div class="service-icon">👤</div>
+            <div class="service-content">
+              <h3>Già nostro cliente?</h3>
+              <p>Accedi con il codice fiscale per gestire le tue prenotazioni</p>
+              
+              <form id="login-form" class="login-form">
+                <div class="form-group">
+                  <label for="cf-input">Codice Fiscale</label>
+                  <input 
+                    type="text" 
+                    id="cf-input" 
+                    placeholder="RSSMRA85M01H501Z"
+                    maxlength="16"
+                    required
+                    autocomplete="off"
+                    class="form-input"
+                  >
+                  <small class="input-hint">16 caratteri: lettere e numeri</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  <span class="btn-text">🔑 Accedi al tuo Account</span>
+                  <div class="btn-spinner hidden"></div>
+                </button>
+              </form>
+              
+              <div class="benefits-list">
+                <div class="benefit-item">
+                  <span class="benefit-icon">📋</span>
+                  <span>Visualizza prenotazioni</span>
+                </div>
+                <div class="benefit-item">
+                  <span class="benefit-icon">🔄</span>
+                  <span>Stato richieste in tempo reale</span>
+                </div>
+                <div class="benefit-item">
+                  <span class="benefit-icon">⚡</span>
+                  <span>Prenotazione veloce</span>
+                </div>
+              </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-full">
-              <span class="btn-text">[>] Accedi al tuo Account</span>
-              <div class="btn-spinner hidden"></div>
-            </button>
-          </form>
-          
-          <div class="section-benefits">
-            <p><strong>[+] Con il tuo account puoi:</strong></p>
-            <ul>
-              <li>[LIST] Visualizzare le tue prenotazioni</li>
-              <li>[SYNC] Seguire lo stato delle richieste</li>
-              <li>[FAST] Prenotazione rapida con dati salvati</li>
-            </ul>
+          </div>
+
+          <!-- NEW CUSTOMER SECTION -->
+          <div class="service-card new-customer">
+            <div class="service-icon">✨</div>
+            <div class="service-content">
+              <h3>Nuovo cliente?</h3>
+              <p>Verifica disponibilità e prenota il tuo pulmino in pochi click</p>
+              
+              <button id="new-customer-cta" class="btn btn-accent btn-block btn-large">
+                🔍 Verifica Disponibilità
+              </button>
+              
+              <div class="benefits-list">
+                <div class="benefit-item">
+                  <span class="benefit-icon">🎯</span>
+                  <span>Controllo immediato disponibilità</span>
+                </div>
+                <div class="benefit-item">
+                  <span class="benefit-icon">📅</span>
+                  <span>Date preimpostate per domani</span>
+                </div>
+                <div class="benefit-item">
+                  <span class="benefit-icon">📝</span>
+                  <span>Compilazione guidata</span>
+                </div>
+              </div>
+              
+              <div class="info-note">
+                <div class="note-icon">💡</div>
+                <p>Nessuna registrazione richiesta: controlla subito i pulmini disponibili</p>
+              </div>
+            </div>
           </div>
         </div>
+      </section>
 
-        <!-- NUOVO CLIENTE SECTION -->
-        <div class="customer-section new-customer">
-          <div class="section-icon">[NEW]</div>
-          <h2>Nuovo cliente?</h2>
-          <p>Verifica subito la disponibilita dei nostri pulmini 9 posti!</p>
-          
-          <button id="new-customer-cta" class="btn btn-success btn-full btn-large">
-            [SEARCH] Verifica Disponibilita Pulmini
-          </button>
-          
-          <div class="section-benefits">
-            <p><strong>[TARGET] Senza registrazione:</strong></p>
-            <ul>
-              <li>[GO] Controlla subito i pulmini disponibili</li>
-              <li>[CAL] Date gia preimpostate per domani</li>
-              <li>[FORM] Compila i dati solo alla fine</li>
-            </ul>
+      <!-- USER DASHBOARD (hidden initially) -->
+      <section id="user-dashboard" class="user-dashboard hidden">
+        <div class="dashboard-header">
+          <div class="user-info">
+            <div class="user-avatar">👤</div>
+            <div class="user-details">
+              <h2>Benvenuto, <span id="user-name">Cliente</span></h2>
+              <p id="user-subtitle">Gestisci le tue prenotazioni</p>
+            </div>
           </div>
-          
-          <div class="new-customer-note">
-            <p><small>[INFO] <strong>Non serve registrazione:</strong> controlla subito i pulmini disponibili e compila i dati piu avanti nel processo di prenotazione.</small></p>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- USER DASHBOARD (nascosta inizialmente, appare dopo login) -->
-      <div id="user-dashboard" class="section hidden">
-        <!-- User Info -->
-        <div class="user-info">
-          <div class="user-details">
-            <h2>Benvenuto, <span id="user-name">Cliente</span> [WAVE]</h2>
-            <p id="user-subtitle">Gestisci le tue prenotazioni</p>
-          </div>
-          <button id="logout-btn" class="btn btn-outline" title="Disconnetti">
-            [EXIT] Esci
+          <button id="logout-btn" class="btn btn-outline">
+            🔓 Esci
           </button>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="tabs-nav">
-          <button class="tab-button active" data-tab="prenotazioni">Le mie prenotazioni</button>
-          <button class="tab-button" data-tab="nuovo">Nuova prenotazione</button>
-          <button class="tab-button" data-tab="profilo">Il mio profilo</button>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+          <button class="tab-btn active" data-tab="prenotazioni">
+            <span class="tab-icon">📋</span>
+            <span class="tab-text">Prenotazioni</span>
+          </button>
+          <button class="tab-btn" data-tab="nuovo">
+            <span class="tab-icon">➕</span>
+            <span class="tab-text">Nuova</span>
+          </button>
+          <button class="tab-btn" data-tab="profilo">
+            <span class="tab-icon">👤</span>
+            <span class="tab-text">Profilo</span>
+          </button>
         </div>
 
         <!-- Tab Contents -->
         <div class="tab-contents">
           <!-- PRENOTAZIONI TAB -->
           <div id="prenotazioni-tab" class="tab-content active">
-            <div class="section-header">
-              <h3>[LIST] Le tue prenotazioni</h3>
-              <button id="refresh-bookings" class="btn btn-sm btn-outline">[SYNC] Aggiorna</button>
-            </div>
-            
-            <div id="prenotazioni-list" class="bookings-list">
-              <div class="loading-placeholder">
-                <div class="placeholder-spinner"></div>
-                <p>Caricamento prenotazioni...</p>
+            <div class="card">
+              <div class="card-header">
+                <h3>📋 Le tue prenotazioni</h3>
+                <button id="refresh-bookings" class="btn btn-ghost">
+                  🔄 Aggiorna
+                </button>
               </div>
-            </div>
+              
+              <div id="prenotazioni-list" class="bookings-list">
+                <div class="loading-state">
+                  <div class="loading-spinner"></div>
+                  <p>Caricamento prenotazioni...</p>
+                </div>
+              </div>
 
-            <div id="empty-bookings" class="empty-state hidden">
-              <div class="empty-icon">[EMPTY]</div>
-              <h4>Nessuna prenotazione trovata</h4>
-              <p>Non hai ancora effettuato prenotazioni.</p>
-              <button class="btn btn-primary" data-tab-switch="nuovo">
-                [NEW] Prenota ora
-              </button>
+              <div id="empty-bookings" class="empty-state hidden">
+                <div class="empty-icon">📝</div>
+                <h4>Nessuna prenotazione</h4>
+                <p>Non hai ancora effettuato prenotazioni.</p>
+                <button class="btn btn-accent" data-tab-switch="nuovo">
+                  ➕ Prenota ora
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- NUOVO TAB -->
           <div id="nuovo-tab" class="tab-content">
-            <div class="section-header">
-              <h3>[NEW] Nuova Prenotazione</h3>
-              
-              <!-- BREADCRUMB NAVIGATION -->
-              <div class="breadcrumb-nav">
-                <button class="breadcrumb-item active" data-step="1">
-                  <span class="breadcrumb-icon">[CAL]</span>
-                  <span class="breadcrumb-text">Date</span>
-                </button>
-                <button class="breadcrumb-item" data-step="2">
-                  <span class="breadcrumb-icon">[VAN]</span>
-                  <span class="breadcrumb-text">Pulmino</span>
-                </button>
-                <button class="breadcrumb-item" data-step="3">
-                  <span class="breadcrumb-icon">[$$]</span>
-                  <span class="breadcrumb-text">Preventivo</span>
-                </button>
-                <button class="breadcrumb-item" data-step="4">
-                  <span class="breadcrumb-icon">[USERS]</span>
-                  <span class="breadcrumb-text">Autisti</span>
-                </button>
-                <button class="breadcrumb-item" data-step="5">
-                  <span class="breadcrumb-icon">[OK]</span>
-                  <span class="breadcrumb-text">Conferma</span>
-                </button>
-              </div>
-              
-              <!-- PROGRESS BAR -->
-              <div class="wizard-progress">
-                <div class="progress-step active" data-step="1">
-                  <span class="step-icon">[CAL]</span>
-                </div>
-                <div class="progress-step" data-step="2">
-                  <span class="step-icon">[VAN]</span>
-                </div>
-                <div class="progress-step" data-step="3">
-                  <span class="step-icon">[$$]</span>
-                </div>
-                <div class="progress-step" data-step="4">
-                  <span class="step-icon">[USERS]</span>
-                </div>
-                <div class="progress-step" data-step="5">
-                  <span class="step-icon">[OK]</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- STEP 1: Date e Orari -->
-            <div id="step-1" class="wizard-step active">
-              <div class="step-header">
-                <h4>[CAL] Step 1: Seleziona Date e Orario</h4>
-                <p class="step-description">Scegli il periodo per il tuo noleggio</p>
-              </div>
-              <form id="step1-form" class="form">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="data-ritiro">[CAL] Data Ritiro:</label>
-                    <input type="date" id="data-ritiro" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="ora-ritiro">[TIME] Ora Ritiro:</label>
-                    <select id="ora-ritiro" required>
-                      <option value="">Seleziona orario</option>
-                      <option value="08:00">08:00 - Mattina</option>
-                      <option value="12:00">12:00 - Mezzogiorno</option>
-                      <option value="16:00">16:00 - Pomeriggio</option>
-                      <option value="20:00">20:00 - Sera</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="data-consegna">[CAL] Data Consegna:</label>
-                    <input type="date" id="data-consegna" required>
-                  </div>
-                  <div class="form-group">
-                    <label for="ora-consegna">[TIME] Ora Consegna:</label>
-                    <select id="ora-consegna" required>
-                      <option value="">Seleziona orario</option>
-                      <option value="08:00">08:00 - Mattina</option>
-                      <option value="12:00">12:00 - Mezzogiorno</option>
-                      <option value="16:00">16:00 - Pomeriggio</option>
-                      <option value="20:00">20:00 - Sera</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label for="destinazione">[TARGET] Destinazione:</label>
-                  <div class="input-with-voice">
-                    <input type="text" id="destinazione" placeholder="Es: Roma Centro, Fiumicino Aeroporto, Ostia Lido" required>
-                    <button type="button" id="voice-input-btn" class="voice-btn" title="Registra vocalmente">[MIC]</button>
-                  </div>
-                  <div class="input-hint">Specifica la destinazione principale del viaggio</div>
-                </div>
-                <div class="step-actions">
-                  <button type="button" id="step1-next" class="btn btn-primary">Avanti -></button>
-                </div>
-              </form>
-            </div>
-
-            <!-- STEP 2: Selezione Veicolo -->
-            <div id="step-2" class="wizard-step">
-              <div class="step-header">
-                <h4>[VAN] Step 2: Scegli il Pulmino</h4>
-                <p class="step-description">Seleziona il veicolo piu adatto alle tue esigenze</p>
-              </div>
-              <div id="veicoli-list" class="vehicles-grid">
-                <div class="loading-placeholder">
-                  <div class="placeholder-spinner"></div>
-                  <p>Caricamento veicoli disponibili...</p>
-                </div>
-              </div>
-              <div class="step-actions">
-                <button type="button" id="step2-back" class="btn btn-outline"><- Indietro</button>
-                <button type="button" id="step2-next" class="btn btn-primary" disabled>Richiedi Preventivo -></button>
-              </div>
-            </div>
-
-            <!-- STEP 3: Richiedi Preventivo -->
-            <div id="step-3" class="wizard-step">
-              <div class="step-header">
-                <h4>[$$] Step 3: Richiedi Preventivo</h4>
-                <p class="step-description">Contattaci per un preventivo personalizzato (obbligatorio per tutti)</p>
-              </div>
-              
-              <div class="preventivo-container">
-                <div class="preventivo-info">
-                  <div class="info-icon">[$$]</div>
-                  <h5>Preventivo personalizzato necessario</h5>
-                  <p>Per garantirti il miglior prezzo, richiedi un preventivo personalizzato. Tutti i clienti devono contattarci prima di procedere:</p>
-                </div>
-                
-                <div class="preventivo-summary">
-                  <h6>[LIST] Riepilogo della tua richiesta:</h6>
-                  <div id="preventivo-details" class="summary-details">
-                    <!-- Popolato dinamicamente -->
-                  </div>
-                </div>
-                
-                <div class="contact-options">
-                  <button type="button" id="call-btn" class="btn btn-primary btn-large">
-                    [PHONE] Chiama Ora
-                    <small>328 658 9618</small>
-                  </button>
-                  
-                  <button type="button" id="whatsapp-btn" class="btn btn-success btn-large">
-                    [MSG] Invia WhatsApp
-                    <small>Messaggio precompilato</small>
-                  </button>
-                </div>
-                
-                <div id="preventivo-completed" class="preventivo-status hidden">
-                  <div class="status-icon">[OK]</div>
-                  <p><strong>Preventivo richiesto!</strong></p>
-                  <p class="status-note">Dopo aver ricevuto il preventivo, torna qui e completa la prenotazione con i dati degli autisti.</p>
-                </div>
-
-                <div id="rate-limit-warning" class="rate-limit-warning hidden">
-                  <div class="warning-icon">[!]</div>
-                  <p><strong>Limite raggiunto</strong></p>
-                  <p>Hai gia inviato 3 richieste. Attendi <span id="rate-limit-timer"></span> prima di inviare nuovamente.</p>
-                </div>
-
-                <div id="calling-hours-warning" class="calling-hours-warning hidden">
-                  <div class="warning-icon">[TIME]</div>
-                  <p><strong>Orario per chiamate: 8:00 - 21:00</strong></p>
-                  <p>Per rispetto degli orari, ti consigliamo di chiamare tra le 8:00 e le 21:00. Puoi comunque inviare WhatsApp in qualsiasi momento.</p>
-                </div>
-              </div>
-              
-              <div class="step-actions">
-                <button type="button" id="step3-back" class="btn btn-outline"><- Indietro</button>
-                <button type="button" id="step3-next" class="btn btn-primary" disabled>Continua con Autisti -></button>
-              </div>
-            </div>
-
-            <!-- STEP 4: Autisti -->
-            <div id="step-4" class="wizard-step">
-              <div class="step-header">
-                <h4>[USERS] Step 4: Dati Autisti</h4>
-                <p class="step-description">Aggiungi almeno un autista (massimo 3)</p>
-              </div>
-              <div id="autisti-container">
-                <!-- Gli autisti vengono aggiunti dinamicamente -->
-              </div>
-              <div class="autisti-actions">
-                <button type="button" id="add-autista" class="btn btn-outline">
-                  [+] Aggiungi Autista
-                </button>
-              </div>
-              <div id="cf-duplicate-warning" class="duplicate-warning hidden">
-                <div class="warning-icon">[!]</div>
-                <p><strong>Codici Fiscali duplicati</strong></p>
-                <p>Alcuni autisti hanno lo stesso Codice Fiscale. Ogni autista deve avere un CF univoco.</p>
-              </div>
-              <div class="step-actions">
-                <button type="button" id="step4-back" class="btn btn-outline"><- Indietro</button>
-                <button type="button" id="step4-next" class="btn btn-primary" disabled>Avanti -></button>
-              </div>
-            </div>
-
-            <!-- STEP 5: Conferma -->
-            <div id="step-5" class="wizard-step">
-              <div class="step-header">
-                <h4>[OK] Step 5: Conferma Prenotazione</h4>
-                <p class="step-description">Controlla i dati e conferma la tua prenotazione</p>
-              </div>
-              <div id="booking-summary" class="booking-summary">
-                <!-- Il riepilogo viene generato dinamicamente -->
-              </div>
-              <div class="step-actions">
-                <button type="button" id="step5-back" class="btn btn-outline"><- Indietro</button>
-                <button type="button" id="step5-confirm" class="btn btn-success">
-                  [OK] Conferma Prenotazione
-                </button>
-              </div>
+            <div class="booking-wizard">
+              <!-- Wizard steps will be inserted here dynamically -->
             </div>
           </div>
 
           <!-- PROFILO TAB -->
           <div id="profilo-tab" class="tab-content">
-            <div class="section-header">
-              <h3>[USER] Il tuo Profilo</h3>
+            <div class="card">
+              <div class="card-header">
+                <h3>👤 Il tuo profilo</h3>
+              </div>
+              <form id="profile-form" class="profile-form">
+                <!-- Profile form fields will be added dynamically -->
+              </form>
             </div>
-            <form id="profile-form" class="form">
-              <div class="form-group">
-                <label for="profile-nome-completo">Nome Completo:</label>
-                <input type="text" id="profile-nome-completo" placeholder="Es: Mario Rossi" required>
-                <div class="input-hint">Nome e cognome separati da spazio</div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="profile-email">Email:</label>
-                  <input type="email" id="profile-email" required>
-                </div>
-                <div class="form-group">
-                  <label for="profile-telefono">Telefono:</label>
-                  <input type="tel" id="profile-telefono" required>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="profile-data-nascita">Data di Nascita:</label>
-                  <input type="date" id="profile-data-nascita" required>
-                </div>
-                <div class="form-group">
-                  <label for="profile-luogo-nascita">Luogo di Nascita:</label>
-                  <input type="text" id="profile-luogo-nascita" required>
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="profile-indirizzo">Indirizzo Completo:</label>
-                <input type="text" id="profile-indirizzo" placeholder="Via, Numero, CAP, Citta" required>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="profile-patente">Numero Patente:</label>
-                  <input type="text" id="profile-patente" required>
-                </div>
-                <div class="form-group">
-                  <label for="profile-patente-scadenza">Scadenza Patente:</label>
-                  <input type="date" id="profile-patente-scadenza" required>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                  [SAVE] Salva Modifiche
-                </button>
-              </div>
-            </form>
           </div>
         </div>
-        
-      </div>
-    </main>
-  </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer class="site-footer">
+        <div class="footer-content">
+          <div class="footer-brand">
+            <h4>Imbriani Stefano Noleggio</h4>
+            <p>Noleggio pulmini 9 posti • Servizio professionale dal 1985</p>
+          </div>
+          <div class="footer-contact">
+            <div class="contact-item">
+              <span class="contact-icon">📞</span>
+              <span>328 658 9618</span>
+            </div>
+            <div class="contact-item">
+              <span class="contact-icon">📧</span>
+              <span>info@imbrianinoleggio.it</span>
+            </div>
+            <div class="contact-item">
+              <span class="contact-icon">📍</span>
+              <span>Agro Pontino, Lazio</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  </main>
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
-
-  <!-- Auto-save Indicator -->
-  <div id="autosave-indicator" class="autosave-indicator hidden">
-    <span class="autosave-icon">[SAVE]</span>
-    <span class="autosave-text">Salvato automaticamente</span>
-  </div>
-
-  <!-- Touch Swipe Areas (Mobile) -->
-  <div id="swipe-left" class="swipe-area swipe-left hidden"></div>
-  <div id="swipe-right" class="swipe-area swipe-right hidden"></div>
 
   <!-- Scripts -->
   <script src="config.js"></script>
