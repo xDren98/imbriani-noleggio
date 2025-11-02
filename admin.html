@@ -1,164 +1,154 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🔧 Admin Dashboard Pro - Imbriani Stefano Noleggio</title>
-  <!-- CRITICAL: Import design-system.css FIRST for theme tokens -->
-  <link rel="stylesheet" href="design-system.css">
-  <link rel="stylesheet" href="admin-styles.css">
-  <!-- Chart.js UMD build for browser compatibility -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-  <!-- SheetJS for Excel export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Admin Dashboard Pro - Imbriani Noleggio</title>
+    <link rel="stylesheet" href="design-system.css">
+    <link rel="stylesheet" href="admin-styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.umd.js"></script>
 </head>
 <body class="admin-body">
-  <!-- Admin Header -->
-  <header class="admin-header">
-    <div class="admin-header-content">
-      <h1>🔧 Admin Dashboard Pro</h1>
-      <div class="admin-actions">
-        <span class="admin-time" id="current-time">--:--</span>
-        <button id="refresh-all" class="btn btn-outline">🔄 Refresh</button>
-        <a href="index.html" class="btn btn-primary">🏠 Torna al Sito</a>
-      </div>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-content">
+                <h1 class="admin-title">🔧 Admin Dashboard Pro</h1>
+                <div class="header-actions">
+                    <div class="clock" id="current-time">00:00:00</div>
+                    <button id="refresh-btn" class="btn btn-primary btn-sm">🔄 Refresh</button>
+                    <button id="back-to-site" class="btn btn-outline btn-sm">🔙 Torna al Sito</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-number" id="stat-oggi">0</div>
+                <div class="stat-label">Prenotazioni Oggi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-number" id="stat-settimana">0</div>
+                <div class="stat-label">Questa Settimana</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🚐</div>
+                <div class="stat-number" id="stat-pulmini">4</div>
+                <div class="stat-label">Pulmini Attivi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-number" id="stat-confermare">2</div>
+                <div class="stat-label">Da Confermare</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-section">
+            <h3>🔍 Filtri</h3>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>📅 Data Da:</label>
+                    <input type="date" id="filter-data-da" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label>📅 Data A:</label>
+                    <input type="date" id="filter-data-a" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label>🔘 Stato:</label>
+                    <select id="filter-stato" class="filter-input">
+                        <option value="">Tutti gli stati</option>
+                        <option value="Da confermare">⏳ Da confermare</option>
+                        <option value="Confermata">✅ Confermata</option>
+                        <option value="Annullata">❌ Annullata</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>🚐 Targa:</label>
+                    <select id="filter-targa" class="filter-input">
+                        <option value="">Tutti i pulmini</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>👤 Cliente:</label>
+                    <input type="text" id="filter-cliente" class="filter-input" placeholder="Nome cliente...">
+                </div>
+            </div>
+            <div class="filters-actions">
+                <button id="apply-filters" class="btn btn-primary">🔍 Applica Filtri</button>
+                <button id="clear-filters" class="btn btn-outline">🗑️ Pulisci</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-section">
+            <div class="section-header">
+                <h3>📋 Gestione Prenotazioni</h3>
+                <div class="section-actions">
+                    <button id="export-excel" class="btn btn-success">📊 Esporta Excel</button>
+                    <button id="export-filtered" class="btn btn-info">📋 Esporta Filtrate</button>
+                </div>
+            </div>
+
+            <!-- Bookings Table -->
+            <div class="table-container">
+                <table class="bookings-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all"> ID</th>
+                            <th>📅 Data Creazione</th>
+                            <th>🔘 Cliente</th>
+                            <th>📞 CF/Telefono</th>
+                            <th>🚐 Targa</th>
+                            <th>📍 Ritiro</th>
+                            <th>📍 Consegna</th>
+                            <th>🎯 Destinazione</th>
+                            <th>📊 Stato</th>
+                            <th>⚙️ Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookings-tbody">
+                        <tr>
+                            <td colspan="10" class="loading-row">
+                                <div class="loading-spinner"></div>
+                                Caricamento prenotazioni...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="bulk-actions hidden" id="bulk-actions">
+                <span class="bulk-count">0 selezionate</span>
+                <button id="bulk-confirm" class="btn btn-success btn-sm">✅ Conferma Selezionate</button>
+                <button id="bulk-cancel" class="btn btn-danger btn-sm">❌ Annulla Selezionate</button>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-row">
+                <div class="chart-container">
+                    <h4>📊 Utilizzo Pulmini</h4>
+                    <canvas id="pulmini-chart" width="400" height="200"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>📈 Stati Prenotazioni</h4>
+                    <canvas id="stati-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-  </header>
 
-  <div class="admin-container">
-    <!-- Quick Stats Cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">📅</div>
-        <div class="stat-content">
-          <h3 id="stat-today">-</h3>
-          <p>Prenotazioni Oggi</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-content">
-          <h3 id="stat-week">-</h3>
-          <p>Questa Settimana</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🚐</div>
-        <div class="stat-content">
-          <h3 id="stat-vehicles">-</h3>
-          <p>Pulmini Attivi</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">💰</div>
-        <div class="stat-content">
-          <h3 id="stat-pending">-</h3>
-          <p>Da Confermare</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Filter Bar -->
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>📅 Data Da:</label>
-        <input type="date" id="filter-date-from" class="filter-input">
-      </div>
-      <div class="filter-group">
-        <label>📅 Data A:</label>
-        <input type="date" id="filter-date-to" class="filter-input">
-      </div>
-      <div class="filter-group">
-        <label>🔍 Stato:</label>
-        <select id="filter-status" class="filter-input">
-          <option value="">Tutti gli stati</option>
-          <option value="Da confermare">Da confermare</option>
-          <option value="Confermata">Confermata</option>
-          <option value="Annullata">Annullata</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>🚐 Targa:</label>
-        <select id="filter-vehicle" class="filter-input">
-          <option value="">Tutti i pulmini</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>👤 Cliente:</label>
-        <input type="text" id="filter-client" class="filter-input" placeholder="Nome cliente...">
-      </div>
-      <div class="filter-actions">
-        <button id="apply-filters" class="btn btn-primary">🔍 Applica Filtri</button>
-        <button id="clear-filters" class="btn btn-outline">🗑️ Pulisci</button>
-      </div>
-    </div>
-
-    <!-- Bookings Table -->
-    <div class="bookings-section">
-      <div class="section-header">
-        <h2>📋 Gestione Prenotazioni</h2>
-        <div class="table-actions">
-          <div class="bulk-actions hidden" id="bulk-actions">
-            <span id="selected-count">0 selezionate</span>
-            <button id="bulk-confirm" class="btn btn-success">✅ Conferma</button>
-            <button id="bulk-reject" class="btn btn-danger">❌ Rifiuta</button>
-          </div>
-          <button id="export-excel" class="btn btn-success">📊 Esporta Excel</button>
-          <button id="export-filtered" class="btn btn-outline">📄 Esporta Filtrate</button>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table class="bookings-table" id="bookings-table">
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="select-all"></th>
-              <th>ID</th>
-              <th>📅 Data Creazione</th>
-              <th>👤 Cliente</th>
-              <th>📱 CF/Telefono</th>
-              <th>🚐 Targa</th>
-              <th>📅 Ritiro</th>
-              <th>📅 Consegna</th>
-              <th>🎯 Destinazione</th>
-              <th>📊 Stato</th>
-              <th>🔧 Azioni</th>
-            </tr>
-          </thead>
-          <tbody id="bookings-tbody">
-            <tr class="loading-row">
-              <td colspan="11">
-                <div class="loading-spinner"></div>
-                Caricamento prenotazioni...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Analytics Section -->
-    <div class="analytics-section">
-      <h2>📈 Analytics</h2>
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h3>📊 Utilizzo Pulmini</h3>
-          <canvas id="vehicles-chart" width="400" height="200"></canvas>
-        </div>
-        <div class="chart-card">
-          <h3>📈 Stati Prenotazioni</h3>
-          <canvas id="status-chart" width="400" height="200"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Container -->
-  <div id="toast-container" class="toast-container"></div>
-
-  <!-- Scripts -->
-  <script src="config.js"></script>
-  <script src="shared-utils.js"></script>
-  <script src="admin-scripts.js"></script>
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="shared-utils.js"></script>
+    <script src="admin-scripts.js"></script>
 </body>
 </html>
