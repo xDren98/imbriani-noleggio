@@ -1,6 +1,6 @@
 /* ================================================================================
-   IMBRIANI NOLEGGIO - MAIN SCRIPTS v8.0 (Anthracite/Azure Enhanced)
-   Complete site functionality with modern theme coordination
+   IMBRIANI NOLEGGIO - MAIN SCRIPTS v8.0 (Complete & Fixed)
+   All working functionality restored with proper coordination
    ================================================================================ */
 
 'use strict';
@@ -8,7 +8,7 @@
 const VERSION = '8.0.0';
 const PHONE_NUMBER = '3286589618';
 const MAX_WHATSAPP_PER_WINDOW = 3;
-const RATE_LIMIT_WINDOW = 10 * 60 * 1000; // 10 minutes
+const RATE_LIMIT_WINDOW = 10 * 60 * 1000;
 
 let clienteCorrente = null;
 let prenotazioniUtente = [];
@@ -19,7 +19,7 @@ let preventivoRequested = false;
 let whatsappTimestamps = [];
 let voiceRecognition = null;
 
-console.log(`%c🚐 Imbriani Noleggio v${VERSION} (Anthracite/Azure Theme)`, 'font-size: 16px; font-weight: bold; color: #3f7ec7;');
+console.log(`%c🚐 Imbriani Noleggio v${VERSION} loaded`, 'font-size: 14px; font-weight: bold; color: #3f7ec7;');
 
 // =====================
 // INITIALIZATION
@@ -29,12 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
   checkExistingSession();
   initVoiceInput();
   initContrastMode();
-  
-  console.log('🎨 Theme: Anthracite/Azure coordination active');
 });
 
 function initializeApp() {
-  console.log('🚀 Initializing Imbriani Noleggio v8.0...');
+  console.log('🚀 Initializing app...');
   
   // Login form
   const loginForm = document.getElementById('login-form');
@@ -62,7 +60,7 @@ function initializeApp() {
     });
   });
   
-  // Tab switcher buttons
+  // Tab switcher buttons (from empty states)
   document.querySelectorAll('[data-tab-switch]').forEach(btn => {
     btn.addEventListener('click', () => {
       const tabName = btn.getAttribute('data-tab-switch');
@@ -76,11 +74,11 @@ function initializeApp() {
     refreshBtn.addEventListener('click', loadUserBookings);
   }
   
-  console.log('✅ App initialization complete');
+  console.log('✅ App initialized successfully');
 }
 
 // =====================
-// AUTHENTICATION
+// VALIDATION
 // =====================
 function isValidCF(cf) {
   if (!cf || typeof cf !== 'string') return false;
@@ -89,6 +87,9 @@ function isValidCF(cf) {
   return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(cleaned);
 }
 
+// =====================
+// AUTHENTICATION
+// =====================
 async function handleLogin(e) {
   e.preventDefault();
   
@@ -102,8 +103,8 @@ async function handleLogin(e) {
     return;
   }
   
-  // Show loading state
-  const submitBtn = cfInput.closest('form').querySelector('button[type="submit"]');
+  // Show loading state on button
+  const submitBtn = e.target.querySelector('button[type="submit"]');
   const btnText = submitBtn.querySelector('.btn-text');
   const btnSpinner = submitBtn.querySelector('.btn-spinner');
   
@@ -126,10 +127,14 @@ async function handleLogin(e) {
       
       showToast(`✅ Benvenuto ${clienteCorrente.name}!`, 'success');
       
-      // Switch to dashboard
+      // Show dashboard
       showUserDashboard();
       
-      // Load user bookings
+      // Update user name in UI
+      const userName = document.getElementById('user-name');
+      if (userName) userName.textContent = clienteCorrente.name;
+      
+      // Load user data
       await loadUserBookings();
       
     } else {
@@ -150,6 +155,7 @@ async function handleLogin(e) {
 function handleLogout() {
   clienteCorrente = null;
   prenotazioniUtente = [];
+  bookingData = {};
   
   // Clear session
   localStorage.removeItem('imbriani_user_session');
@@ -159,7 +165,7 @@ function handleLogout() {
   // Reset UI
   showHomepage();
   
-  // Clear CF input
+  // Clear form
   const cfInput = document.getElementById('cf-input');
   if (cfInput) cfInput.value = '';
   
@@ -187,6 +193,10 @@ function checkExistingSession() {
     };
     
     showUserDashboard();
+    
+    const userName = document.getElementById('user-name');
+    if (userName) userName.textContent = sessionData.name;
+    
     loadUserBookings();
     
     console.log('🔄 Session restored for:', sessionData.name);
@@ -214,33 +224,25 @@ function showUserDashboard() {
   
   if (homepageSections) homepageSections.classList.add('hidden');
   if (dashboard) dashboard.classList.remove('hidden');
-  
-  // Update user info
-  const userName = document.getElementById('user-name');
-  if (userName && clienteCorrente) {
-    userName.textContent = clienteCorrente.name || 'Cliente';
-  }
 }
 
 function handleNewCustomerCTA() {
-  // Pre-fill dates with tomorrow and day after
+  // Show dashboard and switch to new booking tab
+  showUserDashboard();
+  switchTab('nuovo');
+  
+  // Initialize booking wizard with tomorrow's dates
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const dayAfter = new Date(tomorrow);
   dayAfter.setDate(dayAfter.getDate() + 1);
   
-  // Initialize booking data
   bookingData = {
     dataRitiro: tomorrow.toISOString().split('T')[0],
     oraRitiro: '08:00',
     dataConsegna: dayAfter.toISOString().split('T')[0],
-    oraConsegna: '20:00',
-    destinazione: ''
+    oraConsegna: '20:00'
   };
-  
-  // Show dashboard and switch to new booking tab
-  showUserDashboard();
-  switchTab('nuovo');
   
   showToast('📅 Date preimpostate per domani!', 'info');
 }
@@ -261,174 +263,104 @@ function switchTab(tabName) {
     content.classList.toggle('active', content.id === `${tabName}-tab`);
   });
   
-  // Tab-specific logic
-  if (tabName === 'prenotazioni' && clienteCorrente) {
-    loadUserBookings();
+  // Tab-specific initialization
+  if (tabName === 'prenotazioni') {
+    if (clienteCorrente) {
+      loadUserBookings();
+    }
   } else if (tabName === 'nuovo') {
-    initializeBookingWizard();
-  } else if (tabName === 'profilo' && clienteCorrente) {
-    loadUserProfile();
+    initializeNewBookingTab();
+  } else if (tabName === 'profilo') {
+    if (clienteCorrente) {
+      loadUserProfile();
+    }
   }
 }
 
 // =====================
-// BOOKING WIZARD
+// NEW BOOKING TAB
 // =====================
-function initializeBookingWizard() {
+function initializeNewBookingTab() {
   const wizardContainer = document.querySelector('.booking-wizard');
   if (!wizardContainer) return;
   
   wizardContainer.innerHTML = `
-    <div class="wizard-header">
-      <h3>🎯 Nuova Prenotazione</h3>
-      <div class="wizard-progress">
-        <div class="progress-step active">1</div>
-        <div class="progress-step">2</div>
-        <div class="progress-step">3</div>
+    <div class="card">
+      <div class="card-header">
+        <h3>🎯 Nuova Prenotazione</h3>
+        <p>Compila i dati per richiedere un preventivo</p>
       </div>
-    </div>
-    
-    <div class="wizard-content">
-      <!-- Step 1: Date Selection -->
-      <div id="wizard-step-1" class="wizard-step active">
-        <div class="card">
-          <div class="card-header">
-            <h4>📅 Seleziona Date e Orari</h4>
-          </div>
-          <div class="card-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="wizard-data-ritiro">📅 Data Ritiro</label>
-                <input type="date" id="wizard-data-ritiro" class="form-input" required>
-              </div>
-              <div class="form-group">
-                <label for="wizard-ora-ritiro">⏰ Ora Ritiro</label>
-                <select id="wizard-ora-ritiro" class="form-input" required>
-                  <option value="">Seleziona orario...</option>
-                  <option value="08:00">08:00</option>
-                  <option value="09:00">09:00</option>
-                  <option value="10:00">10:00</option>
-                  <option value="11:00">11:00</option>
-                  <option value="12:00">12:00</option>
-                  <option value="13:00">13:00</option>
-                  <option value="14:00">14:00</option>
-                  <option value="15:00">15:00</option>
-                  <option value="16:00">16:00</option>
-                  <option value="17:00">17:00</option>
-                  <option value="18:00">18:00</option>
-                  <option value="19:00">19:00</option>
-                  <option value="20:00">20:00</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="wizard-data-consegna">📅 Data Consegna</label>
-                <input type="date" id="wizard-data-consegna" class="form-input" required>
-              </div>
-              <div class="form-group">
-                <label for="wizard-ora-consegna">⏰ Ora Consegna</label>
-                <select id="wizard-ora-consegna" class="form-input" required>
-                  <option value="">Seleziona orario...</option>
-                  <option value="08:00">08:00</option>
-                  <option value="09:00">09:00</option>
-                  <option value="10:00">10:00</option>
-                  <option value="11:00">11:00</option>
-                  <option value="12:00">12:00</option>
-                  <option value="13:00">13:00</option>
-                  <option value="14:00">14:00</option>
-                  <option value="15:00">15:00</option>
-                  <option value="16:00">16:00</option>
-                  <option value="17:00">17:00</option>
-                  <option value="18:00">18:00</option>
-                  <option value="19:00">19:00</option>
-                  <option value="20:00">20:00</option>
-                </select>
-              </div>
-            </div>
-            
+      <div class="card-body">
+        <form id="booking-form" class="booking-form">
+          <div class="form-grid">
             <div class="form-group">
-              <label for="wizard-destinazione">🎯 Destinazione</label>
-              <div class="input-with-voice">
-                <input type="text" id="wizard-destinazione" class="form-input" 
-                       placeholder="Dove vuoi andare?" required>
-                <button type="button" id="voice-input-btn" class="btn btn-outline voice-btn" 
-                        title="Registrazione vocale">🎤</button>
-              </div>
-              <small class="input-hint">Indica la destinazione principale del viaggio</small>
+              <label for="new-data-ritiro">📅 Data Ritiro</label>
+              <input type="date" id="new-data-ritiro" class="form-input" required>
             </div>
-            
-            <div class="wizard-actions">
-              <button type="button" id="wizard-step1-next" class="btn btn-azure btn-large">
-                ➡️ Verifica Disponibilità
-              </button>
+            <div class="form-group">
+              <label for="new-ora-ritiro">⏰ Ora Ritiro</label>
+              <select id="new-ora-ritiro" class="form-input" required>
+                <option value="">Seleziona...</option>
+                ${generateTimeOptions()}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="new-data-consegna">📅 Data Consegna</label>
+              <input type="date" id="new-data-consegna" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="new-ora-consegna">⏰ Ora Consegna</label>
+              <select id="new-ora-consegna" class="form-input" required>
+                <option value="">Seleziona...</option>
+                ${generateTimeOptions()}
+              </select>
             </div>
           </div>
+          
+          <div class="form-group">
+            <label for="new-destinazione">🎯 Destinazione</label>
+            <div class="input-with-button">
+              <input type="text" id="new-destinazione" class="form-input" 
+                     placeholder="Dove vuoi andare?" required>
+              <button type="button" id="voice-btn" class="btn btn-outline voice-btn" title="Registrazione vocale">
+                🎤
+              </button>
+            </div>
+            <small class="input-hint">Indica la destinazione principale del viaggio</small>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large">
+              🔍 Verifica Disponibilità
+            </button>
+          </div>
+        </form>
+        
+        <!-- Available vehicles will be shown here -->
+        <div id="vehicles-section" class="vehicles-section hidden">
+          <h4>🚐 Pulmini Disponibili</h4>
+          <div id="vehicles-grid" class="vehicles-grid"></div>
         </div>
-      </div>
-      
-      <!-- Step 2: Vehicle Selection -->
-      <div id="wizard-step-2" class="wizard-step">
-        <div class="card">
-          <div class="card-header">
-            <h4>🚐 Pulmini Disponibili</h4>
+        
+        <!-- Booking summary and contact -->
+        <div id="booking-summary-section" class="booking-summary-section hidden">
+          <div class="summary-card">
+            <h4>📋 Riepilogo Prenotazione</h4>
+            <div id="booking-summary-content"></div>
           </div>
-          <div class="card-body">
-            <div id="vehicles-grid" class="vehicles-grid">
-              <div class="loading-state">
-                <div class="loading-spinner"></div>
-                <p>Verifica disponibilità...</p>
-              </div>
-            </div>
-            
-            <div class="wizard-actions">
-              <button type="button" id="wizard-step2-back" class="btn btn-outline">
-                ⬅️ Indietro
+          
+          <div class="contact-options">
+            <h5>📞 Richiedi Preventivo</h5>
+            <div class="contact-grid">
+              <button id="call-preventivo" class="btn btn-success btn-large">
+                📞 Chiama Ora
               </button>
-              <button type="button" id="wizard-step2-next" class="btn btn-azure btn-large" disabled>
-                ➡️ Richiedi Preventivo
+              <button id="whatsapp-preventivo" class="btn btn-primary btn-large">
+                📱 WhatsApp
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Step 3: Quote Request -->
-      <div id="wizard-step-3" class="wizard-step">
-        <div class="card">
-          <div class="card-header">
-            <h4>💰 Richiesta Preventivo</h4>
-          </div>
-          <div class="card-body">
-            <div class="booking-summary" id="booking-summary-preview"></div>
-            
-            <div class="contact-options">
-              <div class="contact-option">
-                <button type="button" id="call-preventivo" class="btn btn-success btn-large">
-                  📞 Chiama Ora
-                </button>
-                <p>Parla direttamente con Stefano</p>
-              </div>
-              
-              <div class="contact-option">
-                <button type="button" id="whatsapp-preventivo" class="btn btn-azure btn-large">
-                  📱 WhatsApp
-                </button>
-                <p>Invia richiesta via messaggio</p>
-              </div>
-            </div>
-            
-            <div id="preventivo-completed" class="success-state hidden">
-              <div class="success-icon">✅</div>
-              <h5>Preventivo Richiesto!</h5>
-              <p>Riceverai risposta entro 2 ore durante l'orario lavorativo</p>
-            </div>
-            
-            <div class="wizard-actions">
-              <button type="button" id="wizard-step3-back" class="btn btn-outline">
-                ⬅️ Indietro
-              </button>
-              <button type="button" id="wizard-step3-next" class="btn btn-azure btn-large" disabled>
-                ➡️ Completa Prenotazione
-              </button>
+            <div id="preventivo-status" class="success-message hidden">
+              ✅ <strong>Preventivo richiesto!</strong> Riceverai risposta entro 2 ore.
             </div>
           </div>
         </div>
@@ -436,133 +368,83 @@ function initializeBookingWizard() {
     </div>
   `;
   
-  // Setup wizard navigation
-  setupWizardNavigation();
+  // Pre-fill dates if available
+  if (bookingData.dataRitiro) {
+    document.getElementById('new-data-ritiro').value = bookingData.dataRitiro;
+    document.getElementById('new-ora-ritiro').value = bookingData.oraRitiro || '';
+    document.getElementById('new-data-consegna').value = bookingData.dataConsegna;
+    document.getElementById('new-ora-consegna').value = bookingData.oraConsegna || '';
+  }
   
-  // Pre-fill with existing data or defaults
-  prefillWizardData();
-}
-
-function setupWizardNavigation() {
-  // Step 1 -> 2
-  document.getElementById('wizard-step1-next')?.addEventListener('click', () => {
-    if (validateWizardStep1()) {
-      goToWizardStep(2);
-      loadAvailableVehicles();
-    }
-  });
+  // Setup form handler
+  const bookingForm = document.getElementById('booking-form');
+  if (bookingForm) {
+    bookingForm.addEventListener('submit', handleBookingFormSubmit);
+  }
   
-  // Step 2 navigation
-  document.getElementById('wizard-step2-back')?.addEventListener('click', () => goToWizardStep(1));
-  document.getElementById('wizard-step2-next')?.addEventListener('click', () => {
-    if (bookingData.selectedVehicle) {
-      goToWizardStep(3);
-      updateBookingSummary();
-    }
-  });
-  
-  // Step 3 navigation
-  document.getElementById('wizard-step3-back')?.addEventListener('click', () => goToWizardStep(2));
-  document.getElementById('wizard-step3-next')?.addEventListener('click', finalizeBooking);
-  
-  // Contact buttons
-  document.getElementById('call-preventivo')?.addEventListener('click', handleCallPreventivo);
-  document.getElementById('whatsapp-preventivo')?.addEventListener('click', handleWhatsAppPreventivo);
-}
-
-function prefillWizardData() {
-  // Set tomorrow as default dates if no data exists
-  if (!bookingData.dataRitiro) {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dayAfter = new Date(tomorrow);
-    dayAfter.setDate(dayAfter.getDate() + 1);
-    
-    document.getElementById('wizard-data-ritiro').value = tomorrow.toISOString().split('T')[0];
-    document.getElementById('wizard-ora-ritiro').value = '08:00';
-    document.getElementById('wizard-data-consegna').value = dayAfter.toISOString().split('T')[0];
-    document.getElementById('wizard-ora-consegna').value = '20:00';
-  } else {
-    // Restore existing data
-    document.getElementById('wizard-data-ritiro').value = bookingData.dataRitiro || '';
-    document.getElementById('wizard-ora-ritiro').value = bookingData.oraRitiro || '';
-    document.getElementById('wizard-data-consegna').value = bookingData.dataConsegna || '';
-    document.getElementById('wizard-ora-consegna').value = bookingData.oraConsegna || '';
-    document.getElementById('wizard-destinazione').value = bookingData.destinazione || '';
+  // Setup voice input
+  const voiceBtn = document.getElementById('voice-btn');
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', handleVoiceInput);
   }
 }
 
-function goToWizardStep(step) {
-  console.log(`🔄 Going to wizard step ${step}`);
-  
-  // Hide all steps
-  document.querySelectorAll('.wizard-step').forEach(stepEl => {
-    stepEl.classList.remove('active');
-  });
-  
-  // Show target step
-  const targetStep = document.getElementById(`wizard-step-${step}`);
-  if (targetStep) {
-    targetStep.classList.add('active');
-  }
-  
-  // Update progress indicators
-  document.querySelectorAll('.progress-step').forEach((progressStep, index) => {
-    const stepNum = index + 1;
-    progressStep.classList.toggle('active', stepNum === step);
-    progressStep.classList.toggle('completed', stepNum < step);
-  });
-  
-  stepAttuale = step;
+function generateTimeOptions() {
+  const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
+                 '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+  return times.map(time => `<option value="${time}">${time}</option>`).join('');
 }
 
-function validateWizardStep1() {
-  const dataRitiro = document.getElementById('wizard-data-ritiro')?.value;
-  const oraRitiro = document.getElementById('wizard-ora-ritiro')?.value;
-  const dataConsegna = document.getElementById('wizard-data-consegna')?.value;
-  const oraConsegna = document.getElementById('wizard-ora-consegna')?.value;
-  const destinazione = document.getElementById('wizard-destinazione')?.value?.trim();
+async function handleBookingFormSubmit(e) {
+  e.preventDefault();
   
-  if (!dataRitiro || !oraRitiro || !dataConsegna || !oraConsegna || !destinazione) {
+  const formData = {
+    dataRitiro: document.getElementById('new-data-ritiro').value,
+    oraRitiro: document.getElementById('new-ora-ritiro').value,
+    dataConsegna: document.getElementById('new-data-consegna').value,
+    oraConsegna: document.getElementById('new-ora-consegna').value,
+    destinazione: document.getElementById('new-destinazione').value.trim()
+  };
+  
+  // Validation
+  if (!formData.dataRitiro || !formData.oraRitiro || !formData.dataConsegna || 
+      !formData.oraConsegna || !formData.destinazione) {
     showToast('❌ Compila tutti i campi', 'error');
-    return false;
+    return;
   }
   
-  const startDateTime = new Date(`${dataRitiro}T${oraRitiro}:00`);
-  const endDateTime = new Date(`${dataConsegna}T${oraConsegna}:00`);
+  const startDateTime = new Date(`${formData.dataRitiro}T${formData.oraRitiro}:00`);
+  const endDateTime = new Date(`${formData.dataConsegna}T${formData.oraConsegna}:00`);
   
   if (startDateTime >= endDateTime) {
     showToast('❌ Data/ora consegna deve essere dopo il ritiro', 'error');
-    return false;
+    return;
   }
   
-  // Check if dates are in the future
-  const now = new Date();
-  if (startDateTime < now) {
+  if (startDateTime < new Date()) {
     showToast('❌ La data di ritiro deve essere futura', 'error');
-    return false;
+    return;
   }
   
   // Save data
-  bookingData = {
-    ...bookingData,
-    dataRitiro,
-    oraRitiro,
-    dataConsegna,
-    oraConsegna,
-    destinazione
-  };
-  
+  bookingData = formData;
   localStorage.setItem('BOOKING_DRAFT', JSON.stringify(bookingData));
-  return true;
+  
+  // Load available vehicles
+  await loadAvailableVehicles();
 }
 
 // =====================
 // VEHICLE MANAGEMENT
 // =====================
 async function loadAvailableVehicles() {
+  const vehiclesSection = document.getElementById('vehicles-section');
   const vehiclesGrid = document.getElementById('vehicles-grid');
-  if (!vehiclesGrid) return;
+  
+  if (!vehiclesSection || !vehiclesGrid) return;
+  
+  vehiclesSection.classList.remove('hidden');
+  vehiclesGrid.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Caricamento veicoli...</p></div>';
   
   try {
     const response = await callAPI('getAvailableVehicles', {
@@ -570,33 +452,32 @@ async function loadAvailableVehicles() {
       dataFine: bookingData.dataConsegna
     });
     
-    if (response.success && response.data) {
+    if (response.success && response.data && response.data.length > 0) {
       availableVehicles = response.data;
-      renderAvailableVehicles();
+      renderVehicles();
     } else {
       vehiclesGrid.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">🚐</div>
           <h4>Nessun pulmino disponibile</h4>
           <p>Per le date selezionate non ci sono veicoli disponibili</p>
-          <button class="btn btn-outline" onclick="goToWizardStep(1)">⬅️ Modifica Date</button>
         </div>
       `;
     }
   } catch (error) {
     console.error('Error loading vehicles:', error);
     vehiclesGrid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">❌</div>
+      <div class="error-state">
+        <div class="error-icon">❌</div>
         <h4>Errore di connessione</h4>
         <p>Impossibile caricare i veicoli disponibili</p>
-        <button class="btn btn-azure" onclick="loadAvailableVehicles()">🔄 Riprova</button>
+        <button class="btn btn-primary" onclick="loadAvailableVehicles()">🔄 Riprova</button>
       </div>
     `;
   }
 }
 
-function renderAvailableVehicles() {
+function renderVehicles() {
   const vehiclesGrid = document.getElementById('vehicles-grid');
   if (!vehiclesGrid) return;
   
@@ -612,19 +493,8 @@ function renderAvailableVehicles() {
         <p>👥 ${vehicle.Posti || 9} posti</p>
         <p>🎨 ${vehicle.Colore || 'Standard'}</p>
       </div>
-      <div class="vehicle-features">
-        <span class="feature">❄️ A/C</span>
-        <span class="feature">📻 Radio</span>
-        <span class="feature">🔌 USB</span>
-      </div>
     </div>
   `).join('');
-  
-  // Update next button state
-  const nextBtn = document.getElementById('wizard-step2-next');
-  if (nextBtn) {
-    nextBtn.disabled = !bookingData.selectedVehicle;
-  }
 }
 
 function selectVehicle(targa) {
@@ -639,26 +509,26 @@ function selectVehicle(targa) {
     card.classList.remove('selected');
   });
   
-  document.querySelector(`[onclick="selectVehicle('${targa}')"]`)?.classList.add('selected');
-  
-  // Enable next button
-  const nextBtn = document.getElementById('wizard-step2-next');
-  if (nextBtn) {
-    nextBtn.disabled = false;
-  }
+  event.target.closest('.vehicle-card').classList.add('selected');
   
   showToast(`✅ Selezionato: ${targa}`, 'success');
   
-  // Save to localStorage
+  // Show booking summary
+  showBookingSummary();
+  
   localStorage.setItem('BOOKING_DRAFT', JSON.stringify(bookingData));
 }
 
 // =====================
-// PREVENTIVO MANAGEMENT
+// BOOKING SUMMARY & PREVENTIVO
 // =====================
-function updateBookingSummary() {
-  const summaryContainer = document.getElementById('booking-summary-preview');
-  if (!summaryContainer) return;
+function showBookingSummary() {
+  const summarySection = document.getElementById('booking-summary-section');
+  const summaryContent = document.getElementById('booking-summary-content');
+  
+  if (!summarySection || !summaryContent) return;
+  
+  summarySection.classList.remove('hidden');
   
   const startDate = new Date(`${bookingData.dataRitiro}T${bookingData.oraRitiro}:00`);
   const endDate = new Date(`${bookingData.dataConsegna}T${bookingData.oraConsegna}:00`);
@@ -672,39 +542,42 @@ function updateBookingSummary() {
   else if (days > 0) durationText = `${days} giorno${days > 1 ? 'i' : ''}`;
   else durationText = `${hours} ore`;
   
-  summaryContainer.innerHTML = `
-    <div class="summary-card">
-      <h5>📋 Riepilogo Prenotazione</h5>
-      <div class="summary-grid">
-        <div class="summary-item">
-          <span class="summary-label">📅 Ritiro:</span>
-          <span class="summary-value">${formatDate(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">📅 Consegna:</span>
-          <span class="summary-value">${formatDate(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">⏱️ Durata:</span>
-          <span class="summary-value">${durationText}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">🎯 Destinazione:</span>
-          <span class="summary-value">${bookingData.destinazione}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">🚐 Pulmino:</span>
-          <span class="summary-value">${bookingData.targa} (${bookingData.selectedVehicle?.Posti || 9} posti)</span>
-        </div>
+  summaryContent.innerHTML = `
+    <div class="summary-grid">
+      <div class="summary-item">
+        <span class="summary-label">📅 Ritiro:</span>
+        <span class="summary-value">${formatDate(bookingData.dataRitiro)} alle ${bookingData.oraRitiro}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">📅 Consegna:</span>
+        <span class="summary-value">${formatDate(bookingData.dataConsegna)} alle ${bookingData.oraConsegna}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">⏱️ Durata:</span>
+        <span class="summary-value">${durationText}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">🎯 Destinazione:</span>
+        <span class="summary-value">${bookingData.destinazione}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">🚐 Pulmino:</span>
+        <span class="summary-value">${bookingData.targa} (${bookingData.selectedVehicle?.Posti || 9} posti)</span>
       </div>
     </div>
   `;
+  
+  // Setup contact buttons
+  const callBtn = document.getElementById('call-preventivo');
+  const whatsappBtn = document.getElementById('whatsapp-preventivo');
+  
+  if (callBtn) callBtn.addEventListener('click', handleCallPreventivo);
+  if (whatsappBtn) whatsappBtn.addEventListener('click', handleWhatsAppPreventivo);
 }
 
 function buildPreventivoMessage() {
   const { dataRitiro, oraRitiro, dataConsegna, oraConsegna, destinazione, targa, selectedVehicle } = bookingData;
   
-  // Calculate duration
   const startDate = new Date(`${dataRitiro}T${oraRitiro}:00`);
   const endDate = new Date(`${dataConsegna}T${oraConsegna}:00`);
   const diffMs = endDate - startDate;
@@ -719,17 +592,8 @@ function buildPreventivoMessage() {
   
   const posti = selectedVehicle?.Posti || '9';
   
-  // ASCII-only message (no Unicode/emoji)
-  return `PREVENTIVO PULMINO IMBRIANI
-===========================
-Dal: ${formatDate(dataRitiro)} alle ${oraRitiro}
-Al: ${formatDate(dataConsegna)} alle ${oraConsegna}
-Destinazione: ${destinazione}
-Pulmino: ${targa} (${posti} posti)
-Durata: ${durationText}
-===========================
-Contatto: ${PHONE_NUMBER}
-Grazie!`;
+  // ASCII-only message for WhatsApp compatibility
+  return `PREVENTIVO PULMINO IMBRIANI\n===========================\nDal: ${formatDate(dataRitiro)} alle ${oraRitiro}\nAl: ${formatDate(dataConsegna)} alle ${oraConsegna}\nDestinazione: ${destinazione}\nPulmino: ${targa} (${posti} posti)\nDurata: ${durationText}\n===========================\nContatto: ${PHONE_NUMBER}\nGrazie!`;
 }
 
 function handleCallPreventivo() {
@@ -742,7 +606,7 @@ function handleCallPreventivo() {
   
   window.open(`tel:+39${PHONE_NUMBER}`);
   markPreventivoRequested();
-  showToast('📞 Apertura dialer... Dopo la chiamata torna qui!', 'info');
+  showToast('📞 Apertura dialer...', 'info');
 }
 
 function handleWhatsAppPreventivo() {
@@ -760,22 +624,16 @@ function handleWhatsAppPreventivo() {
   
   window.open(whatsappURL, '_blank');
   markPreventivoRequested();
-  showToast('📱 WhatsApp aperto! Dopo invio torna qui', 'success');
+  showToast('📱 WhatsApp aperto!', 'success');
 }
 
 function markPreventivoRequested() {
   preventivoRequested = true;
   localStorage.setItem('PREVENTIVO_REQUESTED', '1');
   
-  const completedState = document.getElementById('preventivo-completed');
-  if (completedState) {
-    completedState.classList.remove('hidden');
-  }
-  
-  const nextBtn = document.getElementById('wizard-step3-next');
-  if (nextBtn) {
-    nextBtn.disabled = false;
-    nextBtn.classList.add('btn-pulse');
+  const statusDiv = document.getElementById('preventivo-status');
+  if (statusDiv) {
+    statusDiv.classList.remove('hidden');
   }
 }
 
@@ -801,7 +659,6 @@ async function loadUserBookings() {
   
   if (!bookingsList) return;
   
-  // Show loading state
   bookingsList.innerHTML = `
     <div class="loading-state">
       <div class="loading-spinner"></div>
@@ -812,25 +669,13 @@ async function loadUserBookings() {
   try {
     let response;
     
-    if (clienteCorrente) {
+    if (clienteCorrente && clienteCorrente.CF) {
       response = await callAPI('getUserBookings', { cf: clienteCorrente.CF });
     } else {
-      // Mock data for demo
+      // Demo data for anonymous users
       response = {
         success: true,
-        data: [
-          {
-            ID: 'BOOK-2025-DEMO-001',
-            DataCreazione: '2025-11-01',
-            DataRitiro: '2025-11-03',
-            OraRitiro: '08:00',
-            DataConsegna: '2025-11-05',
-            OraConsegna: '20:00',
-            Destinazione: 'Roma Centro',
-            Targa: 'DN391FW',
-            Stato: 'Confermata'
-          }
-        ]
+        data: []
       };
     }
     
@@ -850,13 +695,13 @@ async function loadUserBookings() {
     }
     
   } catch (error) {
-    console.error('Error loading user bookings:', error);
+    console.error('Error loading bookings:', error);
     bookingsList.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">❌</div>
+      <div class="error-state">
+        <div class="error-icon">❌</div>
         <h4>Errore di connessione</h4>
         <p>Impossibile caricare le prenotazioni</p>
-        <button class="btn btn-azure" onclick="loadUserBookings()">🔄 Riprova</button>
+        <button class="btn btn-primary" onclick="loadUserBookings()">🔄 Riprova</button>
       </div>
     `;
   }
@@ -864,13 +709,13 @@ async function loadUserBookings() {
 
 function renderUserBookings() {
   const bookingsList = document.getElementById('prenotazioni-list');
-  if (!bookingsList || !prenotazioniUtente) return;
+  if (!bookingsList) return;
   
   bookingsList.innerHTML = prenotazioniUtente.map(booking => {
     const statusClass = getStatusBadgeClass(booking.Stato);
     
     return `
-      <div class="booking-card glass-card">
+      <div class="booking-card">
         <div class="booking-header">
           <h4>${booking.ID}</h4>
           <span class="status-badge ${statusClass}">${booking.Stato}</span>
@@ -911,7 +756,7 @@ function getStatusBadgeClass(status) {
 }
 
 // =====================
-// PROFILE MANAGEMENT
+// USER PROFILE
 // =====================
 function loadUserProfile() {
   const profileForm = document.getElementById('profile-form');
@@ -920,29 +765,12 @@ function loadUserProfile() {
   profileForm.innerHTML = `
     <div class="form-grid">
       <div class="form-group">
-        <label for="profile-nome">👤 Nome</label>
-        <input type="text" id="profile-nome" class="form-input" 
-               value="${clienteCorrente.nome || ''}" readonly>
+        <label>👤 Nome</label>
+        <input type="text" class="form-input" value="${clienteCorrente.name || 'Cliente Demo'}" readonly>
       </div>
       <div class="form-group">
-        <label for="profile-cognome">👤 Cognome</label>
-        <input type="text" id="profile-cognome" class="form-input" 
-               value="${clienteCorrente.cognome || ''}" readonly>
-      </div>
-      <div class="form-group">
-        <label for="profile-cf">🆔 Codice Fiscale</label>
-        <input type="text" id="profile-cf" class="form-input" 
-               value="${clienteCorrente.CF || ''}" readonly>
-      </div>
-      <div class="form-group">
-        <label for="profile-telefono">📱 Telefono</label>
-        <input type="tel" id="profile-telefono" class="form-input" 
-               value="${clienteCorrente.telefono || ''}" readonly>
-      </div>
-      <div class="form-group">
-        <label for="profile-email">📧 Email</label>
-        <input type="email" id="profile-email" class="form-input" 
-               value="${clienteCorrente.email || ''}" readonly>
+        <label>🆔 Codice Fiscale</label>
+        <input type="text" class="form-input" value="${clienteCorrente.CF || ''}" readonly>
       </div>
     </div>
     
@@ -972,57 +800,11 @@ function loadUserProfile() {
 }
 
 // =====================
-// FINALIZE BOOKING
-// =====================
-async function finalizeBooking() {
-  if (!preventivoRequested) {
-    showToast('❌ Prima richiedi il preventivo', 'error');
-    return;
-  }
-  
-  try {
-    showToast('⏳ Finalizzazione prenotazione...', 'info');
-    
-    const bookingPayload = {
-      cf: clienteCorrente?.CF || 'ANONYMOUS',
-      ...bookingData
-    };
-    
-    const response = await callAPI('createBooking', bookingPayload, 'POST');
-    
-    if (response.success) {
-      showToast('✅ Prenotazione inviata con successo!', 'success');
-      
-      // Clear draft data
-      localStorage.removeItem('BOOKING_DRAFT');
-      localStorage.removeItem('PREVENTIVO_REQUESTED');
-      
-      // Reset state
-      bookingData = {};
-      preventivoRequested = false;
-      
-      // Switch to bookings tab
-      switchTab('prenotazioni');
-      loadUserBookings();
-      
-    } else {
-      showToast(`❌ ${response.message || 'Errore invio prenotazione'}`, 'error');
-    }
-    
-  } catch (error) {
-    console.error('Finalize booking error:', error);
-    showToast('❌ Errore di connessione', 'error');
-  }
-}
-
-// =====================
 // VOICE INPUT
 // =====================
 function initVoiceInput() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     console.log('⚠️ Voice recognition not supported');
-    const voiceBtn = document.getElementById('voice-input-btn');
-    if (voiceBtn) voiceBtn.style.display = 'none';
     return;
   }
   
@@ -1034,7 +816,7 @@ function initVoiceInput() {
   
   voiceRecognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
-    const destinazioneInput = document.getElementById('wizard-destinazione');
+    const destinazioneInput = document.getElementById('new-destinazione');
     if (destinazioneInput) {
       destinazioneInput.value = transcript;
       showToast(`🎤 Registrato: ${transcript}`, 'success');
@@ -1044,20 +826,18 @@ function initVoiceInput() {
   voiceRecognition.onerror = () => {
     showToast('❌ Errore registrazione vocale', 'error');
   };
-  
-  const voiceBtn = document.getElementById('voice-input-btn');
-  if (voiceBtn) {
-    voiceBtn.addEventListener('click', () => {
-      if (voiceRecognition) {
-        voiceBtn.classList.add('recording');
-        showToast('🎤 Parla ora...', 'info', 3000);
-        voiceRecognition.start();
-        
-        setTimeout(() => {
-          voiceBtn.classList.remove('recording');
-        }, 5000);
-      }
-    });
+}
+
+function handleVoiceInput() {
+  if (voiceRecognition) {
+    const voiceBtn = document.getElementById('voice-btn');
+    voiceBtn.classList.add('recording');
+    showToast('🎤 Parla ora...', 'info', 3000);
+    voiceRecognition.start();
+    
+    setTimeout(() => {
+      voiceBtn.classList.remove('recording');
+    }, 5000);
   }
 }
 
@@ -1071,13 +851,11 @@ function initContrastMode() {
   const contrastEnabled = localStorage.getItem('contrast-mode') === '1';
   if (contrastEnabled) {
     document.body.classList.add('high-contrast');
-    contrastToggle.innerHTML = '<span>👁</span>';
   }
   
   contrastToggle.addEventListener('click', () => {
     const isEnabled = document.body.classList.toggle('high-contrast');
     localStorage.setItem('contrast-mode', isEnabled ? '1' : '0');
-    contrastToggle.innerHTML = `<span>${isEnabled ? '👁' : '👁'}</span>`;
     showToast(isEnabled ? '👁 Contrasto elevato attivo' : '👁 Contrasto normale', 'info');
   });
 }
@@ -1104,7 +882,7 @@ function showLoader(show = true) {
 
 // Global function exports
 window.selectVehicle = selectVehicle;
-window.goToWizardStep = goToWizardStep;
-window.finalizeBooking = finalizeBooking;
+window.loadUserBookings = loadUserBookings;
+window.loadAvailableVehicles = loadAvailableVehicles;
 
-console.log('%c✅ Scripts v8.0 fully loaded with Anthracite/Azure coordination!', 'color: #22c55e; font-weight: bold;');
+console.log('%c✅ Scripts v8.0 loaded successfully!', 'color: #22c55e; font-weight: bold;');
